@@ -1,6 +1,6 @@
 using FlightSystem.Core.Models;
 using FlightSystem.Core.Enums;
-using FlightSystem.Core.DTOs.Request;
+using FlightSystem.Shared.DTOs.Request;
 
 namespace FlightSystem.Tests.Core.Helpers;
 

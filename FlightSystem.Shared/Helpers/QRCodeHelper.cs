@@ -1,6 +1,6 @@
 using QRCoder;
-using FlightSystem.Core.Constants;
-using FlightSystem.Core.DTOs.Response;
+using FlightSystem.Shared.Constants;
+using FlightSystem.Shared.DTOs.Response;
 
 namespace FlightSystem.Shared.Helpers;
 

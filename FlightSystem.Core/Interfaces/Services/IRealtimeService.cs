@@ -1,4 +1,4 @@
-using FlightSystem.Core.DTOs.Response;
+using FlightSystem.Shared.DTOs.Response;
 
 namespace FlightSystem.Core.Interfaces.Services
 {

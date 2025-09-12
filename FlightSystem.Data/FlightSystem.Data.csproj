@@ -22,6 +22,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\FlightSystem.Core\FlightSystem.Core.csproj" />
+    <ProjectReference Include="..\FlightSystem.Shared\FlightSystem.Shared.csproj" />
   </ItemGroup>
 
 </Project>

@@ -1,0 +1,11 @@
+using FlightSystem.Shared.Enums;
+
+namespace FlightSystem.Shared.DTOs.Request
+{
+    public class UpdateSeatDto
+    {
+        public SeatClass? Class { get; set; }
+        public bool? IsActive { get; set; }
+        public bool? IsEmergencyExit { get; set; }
+    }
+}

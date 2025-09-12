@@ -1,7 +1,7 @@
 ﻿using FlightSystem.Core.Interfaces.Services;
 using FlightSystem.Core.Interfaces.Repositories;
-using FlightSystem.Core.DTOs.Request;
-using FlightSystem.Core.DTOs.Response;
+using FlightSystem.Shared.DTOs.Request;
+using FlightSystem.Shared.DTOs.Response;
 using FlightSystem.Core.Models;
 using FlightSystem.Core.Exceptions;
 using FlightSystem.Core.Extensions;

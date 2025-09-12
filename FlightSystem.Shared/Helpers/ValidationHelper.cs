@@ -1,5 +1,5 @@
-using FlightSystem.Core.Constants;
-using FlightSystem.Core.DTOs.Request;
+using FlightSystem.Shared.Constants;
+using FlightSystem.Shared.DTOs.Request;
 
 namespace FlightSystem.Shared.Helpers;
 

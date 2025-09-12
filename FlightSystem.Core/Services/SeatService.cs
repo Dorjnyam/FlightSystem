@@ -1,9 +1,9 @@
 ﻿using FlightSystem.Core.Interfaces.Services;
 using FlightSystem.Core.Interfaces.Repositories;
-using FlightSystem.Core.DTOs.Request;
-using FlightSystem.Core.DTOs.Response;
+using FlightSystem.Shared.DTOs.Request;
+using FlightSystem.Shared.DTOs.Response;
 using FlightSystem.Core.Models;
-using FlightSystem.Core.Enums;
+using FlightSystem.Shared.Enums;
 using FlightSystem.Core.Exceptions;
 using Microsoft.Extensions.Logging;
 using FlightSystem.Core.Extensions;

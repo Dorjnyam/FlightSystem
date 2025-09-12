@@ -1,6 +1,6 @@
-﻿using FlightSystem.Core.DTOs.Request;
-using FlightSystem.Core.DTOs.Response;
-using FlightSystem.Core.Enums;
+﻿using FlightSystem.Shared.DTOs.Request;
+using FlightSystem.Shared.DTOs.Response;
+using FlightSystem.Shared.Enums;
 using FlightSystem.Core.Models;
 
 namespace FlightSystem.Core.Interfaces.Services

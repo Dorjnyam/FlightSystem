@@ -1,4 +1,4 @@
-﻿using FlightSystem.Core.Enums;
+﻿using FlightSystem.Shared.Enums;
 
 namespace FlightSystem.Core.Exceptions
 {

@@ -1,5 +1,5 @@
-﻿using FlightSystem.Core.DTOs.Response;
-using FlightSystem.Core.Enums;
+﻿using FlightSystem.Shared.DTOs.Response;
+using FlightSystem.Shared.Enums;
 
 namespace FlightSystem.Core.Interfaces.Services
 {

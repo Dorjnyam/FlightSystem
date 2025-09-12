@@ -1,5 +1,5 @@
-﻿using FlightSystem.Core.DTOs.Request;
-using FlightSystem.Core.DTOs.Response;
+﻿using FlightSystem.Shared.DTOs.Request;
+using FlightSystem.Shared.DTOs.Response;
 
 namespace FlightSystem.Core.Interfaces.Services
 {

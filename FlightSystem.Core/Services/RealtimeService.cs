@@ -1,5 +1,5 @@
 ﻿using FlightSystem.Core.Interfaces.Services;
-using FlightSystem.Core.DTOs.Response;
+using FlightSystem.Shared.DTOs.Response;
 using Microsoft.Extensions.Logging;
 
 namespace FlightSystem.Core.Services
