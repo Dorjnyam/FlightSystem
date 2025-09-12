@@ -15,6 +15,8 @@ namespace FlightSystem.Core.Models
         public int AssignedByEmployeeId { get; set; }
         public bool IsActive { get; set; }
         public string? Notes { get; set; }
+        public DateTime CreatedAt { get; set; }
+        public DateTime UpdatedAt { get; set; }
         public virtual FlightPassenger FlightPassenger { get; set; } = null!;
         public virtual Seat Seat { get; set; } = null!;
         public virtual Employee AssignedByEmployee { get; set; } = null!;
