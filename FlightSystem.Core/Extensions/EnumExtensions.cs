@@ -1,4 +1,4 @@
-using FlightSystem.Shared.Enums;
+using FlightSystem.Core.Enums;
 using FlightSystem.Core.Constants;
 
 namespace FlightSystem.Core.Extensions

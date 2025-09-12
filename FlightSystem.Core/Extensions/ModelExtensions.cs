@@ -1,5 +1,5 @@
 using FlightSystem.Core.Models;
-using FlightSystem.Shared.Enums;
+using FlightSystem.Core.Enums;
 
 namespace FlightSystem.Core.Extensions
 {

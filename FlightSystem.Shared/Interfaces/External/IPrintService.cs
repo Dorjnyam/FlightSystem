@@ -1,0 +1,12 @@
+using FlightSystem.Shared.DTOs.Response;
+
+namespace FlightSystem.Shared.Interfaces.External
+{
+    public interface IPrintService
+    {
+        Task<bool> PrintBoardingPassAsync(BoardingPassDto boardingPass);
+        Task<byte[]> GenerateBoardingPassPdfAsync(BoardingPassDto boardingPass);
+        Task<bool> IsPrinterAvailableAsync();
+        Task<PrintStatusDto> GetPrintStatusAsync();
+    }
+}

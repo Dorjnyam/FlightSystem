@@ -6,9 +6,9 @@ using FlightSystem.Core.Models;
 using FlightSystem.Core.Enums;
 using FlightSystem.Shared.DTOs.Request;
 using FlightSystem.Shared.DTOs.Response;
-using FlightSystem.Core.Interfaces.Repositories;
-using FlightSystem.Core.Interfaces.Services;
-using FlightSystem.Core.Services;
+using FlightSystem.Shared.Interfaces.Repositories;
+using FlightSystem.Shared.Interfaces.Services;
+using FlightSystem.Shared.Services;
 using FlightSystem.Core.Exceptions;
 using FlightSystem.Tests.Core.Helpers;
 

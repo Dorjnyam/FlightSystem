@@ -1,7 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using FlightSystem.Core.Interfaces.Repositories;
+using FlightSystem.Shared.Interfaces.Repositories;
 using FlightSystem.Data.Context;
 using FlightSystem.Data.Repositories;
 

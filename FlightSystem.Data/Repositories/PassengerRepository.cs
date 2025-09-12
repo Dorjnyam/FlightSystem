@@ -1,5 +1,5 @@
 using Microsoft.EntityFrameworkCore;
-using FlightSystem.Core.Interfaces.Repositories;
+using FlightSystem.Shared.Interfaces.Repositories;
 using FlightSystem.Core.Models;
 using FlightSystem.Core.Enums;
 using FlightSystem.Data.Context;
