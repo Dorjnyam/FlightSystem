@@ -143,6 +143,26 @@ namespace FlightSystem.Shared.Services
             return detailDto;
         }
 
+        public async Task<IEnumerable<SeatInfoDto>> GetAircraftSeatsAsync(int id)
+        {
+            var aircraft = await _aircraftRepository.GetAircraftWithSeatsAsync(id);
+            if (aircraft == null)
+                return Enumerable.Empty<SeatInfoDto>();
+
+            return aircraft.Seats?.Select(seat => new SeatInfoDto
+            {
+                Id = seat.Id,
+                SeatNumber = seat.SeatNumber,
+                Row = seat.Row,
+                Column = seat.Column,
+                SeatClass = seat.Class.ToString(),
+                IsAvailable = true, 
+                IsWindowSeat = seat.IsWindowSeat,
+                IsAisleSeat = seat.IsAisleSeat,
+                IsEmergencyExit = seat.IsEmergencyExit
+            }) ?? Enumerable.Empty<SeatInfoDto>();
+        }
+
         private AircraftDto MapToAircraftDto(Aircraft aircraft)
         {
             return new AircraftDto

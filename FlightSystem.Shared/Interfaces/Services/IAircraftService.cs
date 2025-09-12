@@ -53,5 +53,12 @@ namespace FlightSystem.Shared.Interfaces.Services
         /// <param name="aircraftId"></param>
         /// <returns></returns>
         Task<AircraftDetailDto?> GetAircraftWithSeatsAsync(int aircraftId);
+        
+        /// <summary>
+        /// Нисэх онгоцны суудлуудын жагсаалт авах
+        /// </summary>
+        /// <param name="id"></param>
+        /// <returns></returns>
+        Task<IEnumerable<SeatInfoDto>> GetAircraftSeatsAsync(int id);
     }
 }

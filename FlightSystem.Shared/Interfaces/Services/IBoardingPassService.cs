@@ -68,5 +68,42 @@ namespace FlightSystem.Shared.Interfaces.Services
         /// <param name="flightId"></param>
         /// <returns></returns>
         Task<IEnumerable<BoardingPassDto>> GetBoardingPassesForFlightAsync(int flightId);
+        
+        /// <summary>
+        /// Зорчигч болон нислэгээр boarding pass хайх
+        /// </summary>
+        /// <param name="passengerId"></param>
+        /// <param name="flightId"></param>
+        /// <returns></returns>
+        Task<BoardingPassDto?> GetBoardingPassByPassengerAndFlightAsync(int passengerId, int flightId);
+        
+        /// <summary>
+        /// QR код үүсгэх
+        /// </summary>
+        /// <param name="id"></param>
+        /// <returns></returns>
+        Task<byte[]> GenerateQRCodeAsync(int id);
+        
+        /// <summary>
+        /// Хэвлэх хувилбар үүсгэх
+        /// </summary>
+        /// <param name="id"></param>
+        /// <returns></returns>
+        Task<byte[]> GeneratePrintVersionAsync(int id);
+        
+        /// <summary>
+        /// Нислэгийн бүх boarding pass-ууд авах
+        /// </summary>
+        /// <param name="flightId"></param>
+        /// <returns></returns>
+        Task<IEnumerable<BoardingPassDto>> GetBoardingPassesByFlightAsync(int flightId);
+        
+        /// <summary>
+        /// Boarding pass төлөв өөрчлөх
+        /// </summary>
+        /// <param name="id"></param>
+        /// <param name="isUsed"></param>
+        /// <returns></returns>
+        Task<BoardingPassDto> UpdateBoardingPassStatusAsync(int id, bool isUsed);
     }
 }

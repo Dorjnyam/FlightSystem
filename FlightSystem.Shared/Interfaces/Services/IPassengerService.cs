@@ -42,6 +42,13 @@ namespace FlightSystem.Shared.Interfaces.Services
         /// <param name="passportNumber"></param>
         /// <returns></returns>
         Task<PassengerDto?> GetByPassportNumberAsync(string passportNumber);
+        
+        /// <summary>
+        /// Пасспорт дугаараар зорчигч хайх (алиас)
+        /// </summary>
+        /// <param name="passportNumber"></param>
+        /// <returns></returns>
+        Task<PassengerDto?> GetPassengerByPassportAsync(string passportNumber);
         /// <summary>
         /// Онгоцны нислэг дээрх зорчигчийн мэдээллийг авах
         /// </summary>

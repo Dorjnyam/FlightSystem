@@ -383,6 +383,57 @@ namespace FlightSystem.Shared.Services
                    flight.Status == FlightStatus.CheckinOpen;
         }
 
+        public async Task<PassengerDto?> GetPassengerByPassportAsync(string passportNumber)
+        {
+            var passenger = await _passengerRepository.GetByPassportNumberAsync(passportNumber);
+            if (passenger == null) return null;
+
+            return new PassengerDto
+            {
+                Id = passenger.Id,
+                PassportNumber = passenger.PassportNumber,
+                FirstName = passenger.FirstName,
+                LastName = passenger.LastName,
+                Nationality = passenger.Nationality,
+                DateOfBirth = passenger.DateOfBirth,
+                PassengerType = passenger.Type.ToString(),
+                Email = passenger.Email,
+                Phone = passenger.Phone
+            };
+        }
+
+        public async Task<IEnumerable<PassengerDto>> GetCheckedInPassengersAsync(int flightId)
+        {
+            var checkedInPassengers = await _flightPassengerRepository.GetCheckedInPassengersAsync(flightId);
+            
+            return checkedInPassengers.Select(fp => new PassengerDto
+            {
+                Id = fp.Passenger.Id,
+                PassportNumber = fp.Passenger.PassportNumber,
+                FirstName = fp.Passenger.FirstName,
+                LastName = fp.Passenger.LastName,
+                Nationality = fp.Passenger.Nationality,
+                DateOfBirth = fp.Passenger.DateOfBirth,
+                PassengerType = fp.Passenger.Type.ToString(),
+                Email = fp.Passenger.Email,
+                Phone = fp.Passenger.Phone
+            });
+        }
+
+        public async Task<CheckinEligibilityDto> GetCheckinEligibilityAsync(int flightId, string passportNumber)
+        {
+            return await ValidateCheckinEligibilityAsync(flightId, passportNumber);
+        }
+
+        public async Task<bool> CancelCheckinByFlightAndPassengerAsync(int flightId, int passengerId)
+        {
+            var flightPassenger = await _flightPassengerRepository.GetFlightPassengerAsync(flightId, passengerId);
+            if (flightPassenger == null || !flightPassenger.IsCheckedIn)
+                return false;
+
+            return await CancelCheckinAsync(flightPassenger.Id, 0); // 0 for system cancellation
+        }
+
         private FlightPassengerDto MapToFlightPassengerDto(FlightPassenger flightPassenger)
         {
             return new FlightPassengerDto

@@ -76,5 +76,27 @@ namespace FlightSystem.Shared.Interfaces.Services
         /// <param name="flightId"></param>
         /// <returns></returns>
         Task<SeatMapDto> GenerateSeatMapAsync(int flightId);
+        
+        /// <summary>
+        /// Суудал хуваарилах
+        /// </summary>
+        /// <param name="request"></param>
+        /// <returns></returns>
+        Task<SeatAssignmentDto> AssignSeatAsync(AssignSeatRequestDto request);
+        
+        /// <summary>
+        /// Суудлын хуваарилалт цуцлах
+        /// </summary>
+        /// <param name="seatId"></param>
+        /// <returns></returns>
+        Task<bool> UnassignSeatAsync(int seatId);
+        
+        /// <summary>
+        /// Суудлын төлөв өөрчлөх
+        /// </summary>
+        /// <param name="seatId"></param>
+        /// <param name="isAvailable"></param>
+        /// <returns></returns>
+        Task<SeatInfoDto> UpdateSeatAvailabilityAsync(int seatId, bool isAvailable);
     }
 }

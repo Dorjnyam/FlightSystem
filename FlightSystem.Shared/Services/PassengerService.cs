@@ -104,6 +104,11 @@ namespace FlightSystem.Shared.Services
             return passenger != null ? MapToPassengerDto(passenger) : null;
         }
 
+        public async Task<PassengerDto?> GetPassengerByPassportAsync(string passportNumber)
+        {
+            return await GetByPassportNumberAsync(passportNumber);
+        }
+
         public async Task<FlightPassengerDto?> GetFlightPassengerAsync(int flightId, string passportNumber)
         {
             var passenger = await _passengerRepository.GetByPassportNumberAsync(passportNumber);

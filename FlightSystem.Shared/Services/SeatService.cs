@@ -246,6 +246,28 @@ namespace FlightSystem.Shared.Services
             return seatMap;
         }
 
+        public async Task<SeatAssignmentDto> AssignSeatAsync(AssignSeatRequestDto request)
+        {
+            // This is a stub implementation - delegate to CheckinService
+            throw new NotImplementedException("Use CheckinService.AssignSeatAsync instead");
+        }
+
+        public async Task<bool> UnassignSeatAsync(int seatId)
+        {
+            // This is a stub implementation
+            return await _seatAssignmentRepository.ReleaseSeatAsync(seatId);
+        }
+
+        public async Task<SeatInfoDto> UpdateSeatAvailabilityAsync(int seatId, bool isAvailable)
+        {
+            // This is a stub implementation
+            var seat = await _seatRepository.GetByIdAsync(seatId);
+            if (seat == null)
+                throw new FlightSystemException("Суудал олдсонгүй", "SEAT_NOT_FOUND");
+
+            return MapToSeatInfoDto(seat);
+        }
+
         private SeatDto MapToSeatDto(Seat seat)
         {
             return new SeatDto

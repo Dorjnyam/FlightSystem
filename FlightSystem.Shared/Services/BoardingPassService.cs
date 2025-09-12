@@ -162,6 +162,55 @@ namespace FlightSystem.Shared.Services
             return boardingPasses.Select(MapToBoardingPassDto);
         }
 
+        public async Task<BoardingPassDto?> GetBoardingPassByPassengerAndFlightAsync(int passengerId, int flightId)
+        {
+            // This is a stub implementation
+            var boardingPasses = await _boardingPassRepository.GetBoardingPassesForFlightAsync(flightId);
+            var boardingPass = boardingPasses.FirstOrDefault(bp => bp.FlightPassenger?.PassengerId == passengerId);
+            return boardingPass != null ? MapToBoardingPassDto(boardingPass) : null;
+        }
+
+        public async Task<byte[]> GenerateQRCodeAsync(int id)
+        {
+            // This is a stub implementation - return a simple QR code
+            var boardingPass = await _boardingPassRepository.GetByIdAsync(id);
+            if (boardingPass == null)
+                throw new FlightSystemException("Boarding pass олдсонгүй", "BOARDING_PASS_NOT_FOUND");
+
+            // Return a simple placeholder QR code data
+            return System.Text.Encoding.UTF8.GetBytes($"QR:{boardingPass.BoardingPassCode}");
+        }
+
+        public async Task<byte[]> GeneratePrintVersionAsync(int id)
+        {
+            // This is a stub implementation - return a simple PDF-like data
+            var boardingPass = await _boardingPassRepository.GetByIdAsync(id);
+            if (boardingPass == null)
+                throw new FlightSystemException("Boarding pass олдсонгүй", "BOARDING_PASS_NOT_FOUND");
+
+            // Return a simple placeholder PDF data
+            return System.Text.Encoding.UTF8.GetBytes($"PDF:{boardingPass.BoardingPassCode}");
+        }
+
+        public async Task<IEnumerable<BoardingPassDto>> GetBoardingPassesByFlightAsync(int flightId)
+        {
+            return await GetBoardingPassesForFlightAsync(flightId);
+        }
+
+        public async Task<BoardingPassDto> UpdateBoardingPassStatusAsync(int id, bool isUsed)
+        {
+            var boardingPass = await _boardingPassRepository.GetByIdAsync(id);
+            if (boardingPass == null)
+                throw new FlightSystemException("Boarding pass олдсонгүй", "BOARDING_PASS_NOT_FOUND");
+
+            boardingPass.IsBoardingComplete = isUsed;
+            if (isUsed)
+                boardingPass.BoardingTime = DateTime.UtcNow;
+
+            boardingPass = await _boardingPassRepository.UpdateAsync(boardingPass);
+            return MapToBoardingPassDto(boardingPass);
+        }
+
         private BoardingPassDto MapToBoardingPassDto(BoardingPass boardingPass)
         {
             return new BoardingPassDto

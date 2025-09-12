@@ -74,5 +74,35 @@ namespace FlightSystem.Shared.Interfaces.Services
         /// <param name="employeeId"></param>
         /// <returns></returns>
         Task<bool> CancelCheckinAsync(int flightPassengerId, int employeeId);
+        
+        /// <summary>
+        /// Пасспорт дугаараар зорчигч хайх
+        /// </summary>
+        /// <param name="passportNumber"></param>
+        /// <returns></returns>
+        Task<PassengerDto?> GetPassengerByPassportAsync(string passportNumber);
+        
+        /// <summary>
+        /// Check-in хийгдсэн зорчигчдын жагсаалт авах
+        /// </summary>
+        /// <param name="flightId"></param>
+        /// <returns></returns>
+        Task<IEnumerable<PassengerDto>> GetCheckedInPassengersAsync(int flightId);
+        
+        /// <summary>
+        /// Check-in боломжийн мэдээлэл авах
+        /// </summary>
+        /// <param name="flightId"></param>
+        /// <param name="passportNumber"></param>
+        /// <returns></returns>
+        Task<CheckinEligibilityDto> GetCheckinEligibilityAsync(int flightId, string passportNumber);
+        
+        /// <summary>
+        /// Check-in цуцлах (flightId болон passengerId ашиглан)
+        /// </summary>
+        /// <param name="flightId"></param>
+        /// <param name="passengerId"></param>
+        /// <returns></returns>
+        Task<bool> CancelCheckinByFlightAndPassengerAsync(int flightId, int passengerId);
     }
 }
