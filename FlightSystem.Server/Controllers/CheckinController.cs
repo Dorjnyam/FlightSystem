@@ -193,6 +193,68 @@ public class CheckinController : ControllerBase
     }
 
     /// <summary>
+    /// Зорчигч нислэгт бүртгэлтэй эсэхийг шалгах
+    /// </summary>
+    /// <param name="flightId">Нислэгийн ID</param>
+    /// <param name="passportNumber">Пасспортын дугаар</param>
+    /// <returns>Бүртгэлийн мэдээлэл</returns>
+    [HttpGet("validate-flight-passenger/{flightId}/{passportNumber}")]
+    public async Task<ActionResult<ApiResponseDto<FlightPassengerValidationDto>>> ValidateFlightPassenger(int flightId, string passportNumber)
+    {
+        try
+        {
+            var validation = await _checkinService.ValidateFlightPassengerAsync(flightId, passportNumber);
+            return Ok(new ApiResponseDto<FlightPassengerValidationDto>
+            {
+                Success = true,
+                Data = validation,
+                Message = "Зорчигчийн бүртгэл шалгалт амжилттай хийгдлээ"
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error validating flight passenger for flight {FlightId}, passport {PassportNumber}", 
+                flightId, passportNumber);
+            return StatusCode(500, new ApiResponseDto<FlightPassengerValidationDto>
+            {
+                Success = false,
+                Message = "Серверийн алдаа",
+                Errors = [ex.Message]
+            });
+        }
+    }
+
+    /// <summary>
+    /// Нислэгийн бүртгэлтэй зорчигчдын жагсаалт авах
+    /// </summary>
+    /// <param name="flightId">Нислэгийн ID</param>
+    /// <returns>Бүртгэлтэй зорчигчдын жагсаалт</returns>
+    [HttpGet("flight-passengers/{flightId}")]
+    public async Task<ActionResult<ApiResponseDto<IEnumerable<FlightPassengerDto>>>> GetFlightPassengers(int flightId)
+    {
+        try
+        {
+            var passengers = await _checkinService.GetFlightPassengersAsync(flightId);
+            return Ok(new ApiResponseDto<IEnumerable<FlightPassengerDto>>
+            {
+                Success = true,
+                Data = passengers,
+                Message = "Нислэгийн бүртгэлтэй зорчигчдын жагсаалт амжилттай авлаа"
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting flight passengers for flight {FlightId}", flightId);
+            return StatusCode(500, new ApiResponseDto<IEnumerable<FlightPassengerDto>>
+            {
+                Success = false,
+                Message = "Серверийн алдаа",
+                Errors = [ex.Message]
+            });
+        }
+    }
+
+    /// <summary>
     /// Check-in хийгдсэн зорчигчдын жагсаалт авах
     /// </summary>
     /// <param name="flightId">Нислэгийн ID</param>

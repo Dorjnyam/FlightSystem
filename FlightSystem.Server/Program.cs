@@ -87,6 +87,7 @@ builder.Services.AddScoped<IBoardingPassService, BoardingPassService>();
 builder.Services.AddScoped<ICheckinService, CheckinService>();
 builder.Services.AddScoped<IEmployeeService, EmployeeService>();
 builder.Services.AddScoped<IFlightService, FlightService>();
+builder.Services.AddScoped<IFlightPassengerService, FlightPassengerService>();
 builder.Services.AddScoped<IPassengerService, PassengerService>();
 builder.Services.AddScoped<ISeatService, SeatService>();
 

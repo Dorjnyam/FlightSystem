@@ -104,5 +104,34 @@ namespace FlightSystem.Shared.Interfaces.Services
         /// <param name="passengerId"></param>
         /// <returns></returns>
         Task<bool> CancelCheckinByFlightAndPassengerAsync(int flightId, int passengerId);
+
+        /// <summary>
+        /// Зорчигч нислэгт бүртгэлтэй эсэхийг шалгах
+        /// </summary>
+        /// <param name="flightId"></param>
+        /// <param name="passportNumber"></param>
+        /// <returns></returns>
+        Task<FlightPassengerValidationDto> ValidateFlightPassengerAsync(int flightId, string passportNumber);
+
+        /// <summary>
+        /// Нислэгийн бүртгэлтэй зорчигчдын жагсаалт авах
+        /// </summary>
+        /// <param name="flightId"></param>
+        /// <returns></returns>
+        Task<IEnumerable<FlightPassengerDto>> GetFlightPassengersAsync(int flightId);
+
+        /// <summary>
+        /// Зорчигчийн нислэгийн бүртгэлүүд авах
+        /// </summary>
+        /// <param name="passportNumber"></param>
+        /// <returns></returns>
+        Task<IEnumerable<FlightPassengerDto>> GetPassengerFlightsAsync(string passportNumber);
+
+        /// <summary>
+        /// Booking reference-ээр нислэгийн бүртгэл авах
+        /// </summary>
+        /// <param name="bookingReference"></param>
+        /// <returns></returns>
+        Task<FlightPassengerDto?> GetFlightPassengerByBookingReferenceAsync(string bookingReference);
     }
 }

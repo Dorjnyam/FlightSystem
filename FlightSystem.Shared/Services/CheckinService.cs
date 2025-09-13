@@ -434,6 +434,117 @@ namespace FlightSystem.Shared.Services
             return await CancelCheckinAsync(flightPassenger.Id, 0); // 0 for system cancellation
         }
 
+        public async Task<FlightPassengerValidationDto> ValidateFlightPassengerAsync(int flightId, string passportNumber)
+        {
+            var validation = new FlightPassengerValidationDto
+            {
+                IsValid = false,
+                IsBooked = false,
+                IsCheckedIn = false,
+                Message = "Зорчигч нислэгт бүртгэлгүй"
+            };
+
+            try
+            {
+                var flight = await _flightRepository.GetByIdAsync(flightId);
+                if (flight == null)
+                {
+                    validation.Message = "Нислэг олдсонгүй";
+                    return validation;
+                }
+
+                var passenger = await _passengerRepository.GetByPassportNumberAsync(passportNumber);
+                if (passenger == null)
+                {
+                    validation.Message = "Зорчигч олдсонгүй";
+                    return validation;
+                }
+
+                var flightPassenger = await _flightPassengerRepository.GetFlightPassengerAsync(flightId, passenger.Id);
+                if (flightPassenger == null)
+                {
+                    validation.Message = "Зорчигч энэ нислэгт бүртгэлгүй";
+                    return validation;
+                }
+
+                validation.IsValid = true;
+                validation.IsBooked = true;
+                validation.IsCheckedIn = flightPassenger.IsCheckedIn;
+                validation.FlightPassenger = MapToFlightPassengerDto(flightPassenger);
+                validation.Passenger = new PassengerDto
+                {
+                    Id = passenger.Id,
+                    PassportNumber = passenger.PassportNumber,
+                    FirstName = passenger.FirstName,
+                    LastName = passenger.LastName,
+                    Nationality = passenger.Nationality,
+                    DateOfBirth = passenger.DateOfBirth,
+                    PassengerType = passenger.Type.ToString(),
+                    Email = passenger.Email,
+                    Phone = passenger.Phone
+                };
+                validation.Flight = new FlightInfoDto
+                {
+                    Id = flight.Id,
+                    FlightNumber = flight.FlightNumber,
+                    DepartureAirport = flight.DepartureAirport,
+                    ArrivalAirport = flight.ArrivalAirport,
+                    ScheduledDeparture = flight.ScheduledDeparture,
+                    ScheduledArrival = flight.ScheduledArrival,
+                    Status = flight.Status.ToString(),
+                    GateNumber = flight.GateNumber
+                };
+                validation.BookingReference = flightPassenger.BookingReference;
+                validation.CheckinTime = flightPassenger.CheckinTime;
+
+                // Check if passenger has seat assignment and boarding pass
+                var seatAssignment = await _seatAssignmentRepository.GetByFlightPassengerAsync(flightPassenger.Id);
+                validation.HasSeatAssignment = seatAssignment != null;
+
+                var boardingPass = await _boardingPassRepository.GetByFlightPassengerAsync(flightPassenger.Id);
+                validation.HasBoardingPass = boardingPass != null;
+
+                if (validation.IsCheckedIn)
+                {
+                    validation.Message = "Зорчигч аль хэдийн check-in хийсэн";
+                }
+                else
+                {
+                    validation.Message = "Зорчигч нислэгт бүртгэлтэй, check-in хийх боломжтой";
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error validating flight passenger for flight {FlightId}, passport {PassportNumber}", 
+                    flightId, passportNumber);
+                validation.Message = $"Шалгахад алдаа гарлаа: {ex.Message}";
+            }
+
+            return validation;
+        }
+
+        public async Task<IEnumerable<FlightPassengerDto>> GetFlightPassengersAsync(int flightId)
+        {
+            var flightPassengers = await _flightPassengerRepository.GetPassengersForFlightAsync(flightId);
+            return flightPassengers.Select(MapToFlightPassengerDto);
+        }
+
+        public async Task<IEnumerable<FlightPassengerDto>> GetPassengerFlightsAsync(string passportNumber)
+        {
+            var passenger = await _passengerRepository.GetByPassportNumberAsync(passportNumber);
+            if (passenger == null)
+                return [];
+
+            var flightPassengers = await _flightPassengerRepository.GetFlightsForPassengerAsync(passenger.Id);
+            return flightPassengers.Select(MapToFlightPassengerDto);
+        }
+
+        public async Task<FlightPassengerDto?> GetFlightPassengerByBookingReferenceAsync(string bookingReference)
+        {
+            var flightPassenger = await _flightPassengerRepository.GetByBookingReferenceAsync(bookingReference);
+            return flightPassenger != null ? MapToFlightPassengerDto(flightPassenger) : null;
+        }
+
         private FlightPassengerDto MapToFlightPassengerDto(FlightPassenger flightPassenger)
         {
             return new FlightPassengerDto

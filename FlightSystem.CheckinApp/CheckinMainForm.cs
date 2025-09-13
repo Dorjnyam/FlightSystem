@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Drawing;
 using System.Linq;
 using System.Net.Http;
@@ -14,19 +14,36 @@ using Microsoft.AspNetCore.SignalR.Client;
 
 namespace FlightSystem.CheckinApp
 {
-    public partial class MainForm : Form
+    public partial class CheckinMainForm : Form
     {
         private readonly HttpClient _httpClient;
-        private HubConnection? _hubConnection;
-        private EmployeeDto? _currentEmployee;
-        private FlightInfoDto? _selectedFlight;
         private readonly string _serverUrl = "https://localhost:7261";
+        private HubConnection? _hubConnection;
+        private EmployeeDto _currentEmployee;
+        private FlightInfoDto _selectedFlight;
+        private PassengerDto? _currentPassenger;
 
-        public MainForm()
+        public CheckinMainForm(EmployeeDto employee, FlightInfoDto flight)
         {
             InitializeComponent();
             _httpClient = new HttpClient { BaseAddress = new Uri(_serverUrl) };
+            _currentEmployee = employee;
+            _selectedFlight = flight;
+            
+            InitializeForm();
             SetupSignalR();
+        }
+
+        private void InitializeForm()
+        {
+            lblWelcome.Text = $"Тавтай морил, {_currentEmployee.FullName}";
+            lblFlightInfo.Text = $"Нислэг: {_selectedFlight.FlightNumber}\n" +
+                               $"Чиглэл: {_selectedFlight.DepartureAirport} → {_selectedFlight.ArrivalAirport}\n" +
+                               $"Төлөв: {_selectedFlight.Status}\n" +
+                               $"Хөөрөх: {_selectedFlight.ScheduledDeparture:HH:mm}\n" +
+                               $"Хаалга: {_selectedFlight.GateNumber ?? "Тодорхойгүй"}";
+            
+            LogMessage($"Нислэг сонгогдлоо: {_selectedFlight.FlightNumber}");
         }
 
         private async void SetupSignalR()
@@ -41,6 +58,7 @@ namespace FlightSystem.CheckinApp
                 _hubConnection.On<string>("SystemMessage", OnSystemMessage);
                 
                 await _hubConnection.StartAsync();
+                await JoinFlightGroup(_selectedFlight.Id);
                 LogMessage("SignalR холболт амжилттай үүслээ");
             }
             catch (Exception ex)
@@ -58,10 +76,14 @@ namespace FlightSystem.CheckinApp
             }
 
             LogMessage($"Нислэг {flight.FlightNumber} төлөв өөрчлөгдлөө: {flight.Status}");
-            if (_selectedFlight?.Id == flight.Id)
+            if (_selectedFlight.Id == flight.Id)
             {
                 _selectedFlight = flight;
-                UpdateFlightInfo();
+                lblFlightInfo.Text = $"Нислэг: {_selectedFlight.FlightNumber}\n" +
+                                   $"Чиглэл: {_selectedFlight.DepartureAirport} → {_selectedFlight.ArrivalAirport}\n" +
+                                   $"Төлөв: {_selectedFlight.Status}\n" +
+                                   $"Хөөрөх: {_selectedFlight.ScheduledDeparture:HH:mm}\n" +
+                                   $"Хаалга: {_selectedFlight.GateNumber ?? "Тодорхойгүй"}";
             }
         }
 
@@ -74,95 +96,6 @@ namespace FlightSystem.CheckinApp
             }
 
             LogMessage($"Систем: {message}");
-        }
-
-        private async void btnLogin_Click(object sender, EventArgs e)
-        {
-            var employeeCode = txtEmployeeCode.Text.Trim();
-            var password = txtPassword.Text.Trim();
-
-            if (string.IsNullOrEmpty(employeeCode) || string.IsNullOrEmpty(password))
-            {
-                MessageBox.Show("Ажилтны код болон нууц үгээ оруулна уу", "Алдаа", 
-                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                return;
-            }
-
-            try
-            {
-                var loginDto = new EmployeeLoginDto
-                {
-                    EmployeeCode = employeeCode,
-                    Password = password
-                };
-
-                var json = JsonSerializer.Serialize(loginDto);
-                var content = new StringContent(json, Encoding.UTF8, "application/json");
-                
-                var response = await _httpClient.PostAsync("/api/employee/login", content);
-                var responseContent = await response.Content.ReadAsStringAsync();
-                
-                var result = JsonSerializer.Deserialize<ApiResponseDto<EmployeeLoginResultDto>>(
-                    responseContent, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-
-                if (result?.Success == true && result.Data?.IsSuccess == true)
-                {
-                    _currentEmployee = result.Data.Employee;
-                    panelLogin.Visible = false;
-                    panelMain.Visible = true;
-                    lblWelcome.Text = $"Тавтай морил, {_currentEmployee?.FullName ?? "Ажилтан"}";
-                    
-                    await LoadActiveFlights();
-                    LogMessage($"Амжилттай нэвтэрлээ: {_currentEmployee?.FullName ?? "Ажилтан"}");
-                }
-                else
-                {
-                    MessageBox.Show(result?.Message ?? "Нэвтрэх амжилтгүй", "Алдаа", 
-                        MessageBoxButtons.OK, MessageBoxIcon.Error);
-                }
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"Нэвтрэхэд алдаа гарлаа: {ex.Message}", "Алдаа", 
-                    MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
-        }
-
-        private async Task LoadActiveFlights()
-        {
-            try
-            {
-                var response = await _httpClient.GetAsync("/api/flight/active");
-                var responseContent = await response.Content.ReadAsStringAsync();
-                
-                var result = JsonSerializer.Deserialize<ApiResponseDto<FlightInfoDto[]>>(
-                    responseContent, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-
-                if (result?.Success == true && result.Data != null)
-                {
-                    cmbFlights.Items.Clear();
-                    foreach (var flight in result.Data)
-                    {
-                        cmbFlights.Items.Add(flight);
-                    }
-                    cmbFlights.DisplayMember = "FlightNumber";
-                    LogMessage($"{result.Data.Length} нислэг ачаалалаа");
-                }
-            }
-            catch (Exception ex)
-            {
-                LogMessage($"Нислэгүүд ачаалахад алдаа: {ex.Message}");
-            }
-        }
-
-        private void cmbFlights_SelectedIndexChanged(object sender, EventArgs e)
-        {
-            _selectedFlight = cmbFlights.SelectedItem as FlightInfoDto;
-            if (_selectedFlight != null)
-            {
-                UpdateFlightInfo();
-                _ = Task.Run(() => JoinFlightGroup(_selectedFlight.Id));
-            }
         }
 
         private async Task JoinFlightGroup(int flightId)
@@ -180,17 +113,6 @@ namespace FlightSystem.CheckinApp
             }
         }
 
-        private void UpdateFlightInfo()
-        {
-            if (_selectedFlight == null) return;
-
-            lblFlightInfo.Text = $"Нислэг: {_selectedFlight.FlightNumber}\n" +
-                               $"Чиглэл: {_selectedFlight.DepartureAirport} → {_selectedFlight.ArrivalAirport}\n" +
-                               $"Төлөв: {_selectedFlight.Status}\n" +
-                               $"Хөөрөх: {_selectedFlight.ScheduledDeparture:HH:mm}\n" +
-                               $"Хаалга: {_selectedFlight.GateNumber ?? "Тодорхойгүй"}";
-        }
-
         private async void btnSearchPassenger_Click(object sender, EventArgs e)
         {
             var passport = txtPassportNumber.Text.Trim();
@@ -203,6 +125,9 @@ namespace FlightSystem.CheckinApp
 
             try
             {
+                btnSearchPassenger.Enabled = false;
+                btnSearchPassenger.Text = "Хайж байна...";
+
                 var response = await _httpClient.GetAsync($"/api/passenger/passport/{passport}");
                 var responseContent = await response.Content.ReadAsStringAsync();
                 
@@ -211,26 +136,104 @@ namespace FlightSystem.CheckinApp
 
                 if (result?.Success == true && result.Data != null)
                 {
-                    var passenger = result.Data;
-                    lblPassengerInfo.Text = $"Зорчигч: {passenger.FullName}\n" +
-                                          $"Пасспорт: {passenger.PassportNumber}\n" +
-                                          $"Төрсөн огноо: {passenger.DateOfBirth:yyyy-MM-dd}\n" +
-                                          $"Үндэс: {passenger.Nationality}";
+                    _currentPassenger = result.Data;
+                    lblPassengerInfo.Text = $"Зорчигч: {_currentPassenger.FullName}\n" +
+                                          $"Пасспорт: {_currentPassenger.PassportNumber}\n" +
+                                          $"Төрсөн огноо: {_currentPassenger.DateOfBirth:yyyy-MM-dd}\n" +
+                                          $"Үндэс: {_currentPassenger.Nationality}";
                     
-                    await LoadSeatMap();
-                    LogMessage($"Зорчигч олдлоо: {passenger.FullName}");
+                    // Check if passenger is booked for this flight
+                    await CheckPassengerBooking(passport);
+                    
+                    LogMessage($"Зорчигч олдлоо: {_currentPassenger.FullName}");
                 }
                 else
                 {
                     MessageBox.Show("Зорчигч олдсонгүй", "Мэдээлэл", 
                         MessageBoxButtons.OK, MessageBoxIcon.Information);
                     lblPassengerInfo.Text = "Зорчигч олдсонгүй";
+                    _currentPassenger = null;
                 }
             }
             catch (Exception ex)
             {
                 MessageBox.Show($"Зорчигч хайхад алдаа гарлаа: {ex.Message}", "Алдаа", 
                     MessageBoxButtons.OK, MessageBoxIcon.Error);
+                LogMessage($"Зорчигч хайхад алдаа: {ex.Message}");
+            }
+            finally
+            {
+                btnSearchPassenger.Enabled = true;
+                btnSearchPassenger.Text = "Хайх";
+            }
+        }
+
+        private async Task CheckPassengerBooking(string passportNumber)
+        {
+            try
+            {
+                // First validate FlightPassenger booking
+                var validationResponse = await _httpClient.GetAsync($"/api/checkin/validate-flight-passenger/{_selectedFlight.Id}/{passportNumber}");
+                var validationContent = await validationResponse.Content.ReadAsStringAsync();
+                
+                var validationResult = JsonSerializer.Deserialize<ApiResponseDto<FlightPassengerValidationDto>>(
+                    validationContent, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+                if (validationResult?.Success == true && validationResult.Data != null)
+                {
+                    var validation = validationResult.Data;
+                    
+                    if (!validation.IsValid || !validation.IsBooked)
+                    {
+                        lblBookingStatus.Text = $"Бүртгэлгүй: {validation.Message}";
+                        lblBookingStatus.ForeColor = Color.Red;
+                        btnLoadSeatMap.Enabled = false;
+                        LogMessage($"FlightPassenger validation failed: {validation.Message}");
+                        return;
+                    }
+
+                    // If booked, check eligibility for check-in
+                    var eligibilityResponse = await _httpClient.GetAsync($"/api/checkin/eligibility/{_selectedFlight.Id}/{passportNumber}");
+                    var eligibilityContent = await eligibilityResponse.Content.ReadAsStringAsync();
+                    
+                    var eligibilityResult = JsonSerializer.Deserialize<ApiResponseDto<CheckinEligibilityDto>>(
+                        eligibilityContent, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+                    if (eligibilityResult?.Success == true && eligibilityResult.Data != null)
+                    {
+                        var eligibility = eligibilityResult.Data;
+                        
+                        if (!eligibility.IsEligible)
+                        {
+                            lblBookingStatus.Text = $"Бүртгэлтэй боловч check-in хийх боломжгүй: {eligibility.Reason}";
+                            lblBookingStatus.ForeColor = Color.Orange;
+                            btnLoadSeatMap.Enabled = false;
+                        }
+                        else
+                        {
+                            lblBookingStatus.Text = $"✅ Бүртгэлтэй - Check-in хийх боломжтой\n" +
+                                                  $"Booking: {validation.BookingReference}\n" +
+                                                  $"Check-in статус: {(validation.IsCheckedIn ? "Хийгдсэн" : "Хийгдээгүй")}";
+                            lblBookingStatus.ForeColor = Color.Green;
+                            btnLoadSeatMap.Enabled = true;
+                            await LoadSeatMap();
+                            LogMessage($"FlightPassenger validated successfully: {validation.BookingReference}");
+                        }
+                    }
+                }
+                else
+                {
+                    lblBookingStatus.Text = "FlightPassenger validation failed";
+                    lblBookingStatus.ForeColor = Color.Red;
+                    btnLoadSeatMap.Enabled = false;
+                }
+            }
+            catch (Exception ex)
+            {
+                LogMessage($"Бүртгэл шалгахад алдаа: {ex.Message}");
+                lblBookingStatus.Text = $"Алдаа: {ex.Message}";
+                lblBookingStatus.ForeColor = Color.Red;
+                btnLoadSeatMap.Enabled = false;
             }
         }
 
@@ -240,8 +243,14 @@ namespace FlightSystem.CheckinApp
 
             try
             {
-                panelSeats.Controls.Clear();
+                btnLoadSeatMap.Enabled = false;
+                btnLoadSeatMap.Text = "Ачаалж байна...";
                 
+                panelSeats.Controls.Clear();
+                grpBusinessClass.Controls.Clear();
+                grpPremiumEconomyClass.Controls.Clear();
+                grpEconomyClass.Controls.Clear();
+
                 var response = await _httpClient.GetAsync($"/api/checkin/seatmap/{_selectedFlight.Id}");
                 var responseContent = await response.Content.ReadAsStringAsync();
                 
@@ -251,35 +260,23 @@ namespace FlightSystem.CheckinApp
                 if (result?.Success == true && result.Data != null)
                 {
                     CreateSeatButtons(result.Data);
-                    LogMessage($"Суудлын зураглал : {result.Data.AvailableSeats}/{result.Data.TotalSeats} чөлөөтэй");
+                    LogMessage($"Суудлын зураглал ачааллаа: {result.Data.AvailableSeats}/{result.Data.TotalSeats} чөлөөтэй");
                 }
             }
             catch (Exception ex)
             {
                 LogMessage($"Суудлын зураглал ачаалахад алдаа: {ex.Message}");
+                MessageBox.Show($"Суудлын зураглал ачаалахад алдаа: {ex.Message}", "Алдаа", 
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+            finally
+            {
+                btnLoadSeatMap.Enabled = true;
+                btnLoadSeatMap.Text = "Суудлын зураглал";
             }
         }
 
         private void CreateSeatButtons(SeatMapDto seatMap)
-        {
-            const int seatWidth = 25;
-            const int seatHeight = 20;
-            const int seatSpacing = 2;
-            const int aisleSpacing = 15;
-            const int startX = 30;
-            const int startY = 5;
-            
-            // Clear all seat panels
-            panelSeats.Controls.Clear();
-            grpBusinessClass.Controls.Clear();
-            grpPremiumEconomyClass.Controls.Clear();
-            grpEconomyClass.Controls.Clear();
-
-            // Create realistic Boeing 737 layout
-            CreateBoeing737Layout(seatMap);
-        }
-
-        private void CreateBoeing737Layout(SeatMapDto seatMap)
         {
             const int seatWidth = 25;
             const int seatHeight = 20;
@@ -452,20 +449,23 @@ namespace FlightSystem.CheckinApp
         private async void BtnSeat_Click(object? sender, EventArgs e)
         {
             if (sender is not Button btnSeat || btnSeat.Tag is not SeatInfoDto seat) return;
-            if (string.IsNullOrEmpty(txtPassportNumber.Text.Trim()) || _selectedFlight == null)
+            if (string.IsNullOrEmpty(txtPassportNumber.Text.Trim()) || _currentPassenger == null)
             {
-                MessageBox.Show("Эхлээд зорчигчийг хайна уу", "Алдаа", 
+                MessageBox.Show("Эхлээд зорчигчийг хайж олно уу", "Алдаа", 
                     MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 
             try
             {
+                btnSeat.Enabled = false;
+                btnSeat.Text = "...";
+
                 var checkinRequest = new CheckinRequestDto
                 {
                     FlightNumber = _selectedFlight.FlightNumber,
                     PassportNumber = txtPassportNumber.Text.Trim(),
-                    EmployeeId = _currentEmployee!.Id,
+                    EmployeeId = _currentEmployee.Id,
                     PreferredSeatId = seat.Id
                 };
 
@@ -499,12 +499,21 @@ namespace FlightSystem.CheckinApp
                 {
                     MessageBox.Show(result?.Message ?? "Check-in амжилтгүй", "Алдаа", 
                         MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    btnSeat.Enabled = true;
+                    btnSeat.Text = $"{seat.Row}{seat.Column}";
                 }
             }
             catch (Exception ex)
             {
                 MessageBox.Show($"Check-in хийхэд алдаа гарлаа: {ex.Message}", "Алдаа", 
                     MessageBoxButtons.OK, MessageBoxIcon.Error);
+                LogMessage($"Check-in алдаа: {ex.Message}");
+                
+                if (sender is Button btn)
+                {
+                    btn.Enabled = true;
+                    btn.Text = $"{seat.Row}{seat.Column}";
+                }
             }
         }
 
@@ -512,8 +521,6 @@ namespace FlightSystem.CheckinApp
         {
             try
             {
-                // Энд boarding pass хэвлэх логик бичнэ
-                // Одоогоор зөвхөн мэдээллийг харуулж байна
                 var printInfo = $"=== BOARDING PASS ===\n" +
                               $"Зорчигч: {boardingPass.Passenger.FullName}\n" +
                               $"Нислэг: {boardingPass.Flight.FlightNumber}\n" +
@@ -537,13 +544,6 @@ namespace FlightSystem.CheckinApp
 
         private async void btnUpdateFlightStatus_Click(object sender, EventArgs e)
         {
-            if (_selectedFlight == null)
-            {
-                MessageBox.Show("Нислэг сонгоно уу", "Алдаа", 
-                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                return;
-            }
-
             var statusForm = new FlightStatusForm(_selectedFlight);
             if (statusForm.ShowDialog() == DialogResult.OK)
             {
@@ -552,7 +552,7 @@ namespace FlightSystem.CheckinApp
                     var updateDto = new UpdateFlightStatusDto
                     {
                         Status = statusForm.SelectedStatus,
-                        UpdatedByEmployeeId = _currentEmployee!.Id
+                        UpdatedByEmployeeId = _currentEmployee.Id
                     };
 
                     var json = JsonSerializer.Serialize(updateDto);
@@ -567,7 +567,11 @@ namespace FlightSystem.CheckinApp
                     if (result?.Success == true && result.Data != null)
                     {
                         _selectedFlight = result.Data;
-                        UpdateFlightInfo();
+                        lblFlightInfo.Text = $"Нислэг: {_selectedFlight.FlightNumber}\n" +
+                                           $"Чиглэл: {_selectedFlight.DepartureAirport} → {_selectedFlight.ArrivalAirport}\n" +
+                                           $"Төлөв: {_selectedFlight.Status}\n" +
+                                           $"Хөөрөх: {_selectedFlight.ScheduledDeparture:HH:mm}\n" +
+                                           $"Хаалга: {_selectedFlight.GateNumber ?? "Тодорхойгүй"}";
                         LogMessage($"Нислэгийн төлөв амжилттай өөрчлөгдлөө: {result.Data.Status}");
                         
                         MessageBox.Show("Нислэгийн төлөв амжилттай өөрчлөгдлөө", "Амжилт", 
@@ -583,6 +587,7 @@ namespace FlightSystem.CheckinApp
                 {
                     MessageBox.Show($"Төлөв өөрчлөхөд алдаа гарлаа: {ex.Message}", "Алдаа", 
                         MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    LogMessage($"Төлөв өөрчлөх алдаа: {ex.Message}");
                 }
             }
         }
@@ -604,6 +609,12 @@ namespace FlightSystem.CheckinApp
                 txtLog.AppendText(logEntry + Environment.NewLine);
                 txtLog.ScrollToCaret();
             }
+        }
+
+        private void btnLogout_Click(object sender, EventArgs e)
+        {
+            DialogResult = DialogResult.OK;
+            Close();
         }
 
         protected override void OnFormClosed(FormClosedEventArgs e)
