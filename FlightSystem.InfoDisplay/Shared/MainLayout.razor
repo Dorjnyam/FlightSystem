@@ -1,19 +1,187 @@
 ﻿@inherits LayoutComponentBase
 
-<PageTitle>FlightSystem.InfoDisplay</PageTitle>
+<PageTitle>Нислэгийн мэдээллийн дэлгэц</PageTitle>
 
-<div class="page">
-    <div class="sidebar">
-        <NavMenu />
-    </div>
-
-    <main>
-        <div class="top-row px-4">
-            <a href="https://docs.microsoft.com/aspnet/" target="_blank">About</a>
+<div class="flight-display">
+    <header class="display-header">
+        <div class="header-content">
+            <div class="logo-section">
+                <h1>🛫 Нислэгийн мэдээлэл</h1>
+            </div>
+            <div class="time-section">
+                <div class="current-time">@DateTime.Now.ToString("HH:mm:ss")</div>
+                <div class="current-date">@DateTime.Now.ToString("yyyy оны MM сарын dd")</div>
+            </div>
         </div>
+    </header>
 
-        <article class="content px-4">
-            @Body
-        </article>
+    <main class="display-main">
+        @Body
     </main>
+
+    <footer class="display-footer">
+        <div class="footer-content">
+            <div class="connection-status">
+                <span class="status-indicator @(IsConnected ? "connected" : "disconnected")"></span>
+                @(IsConnected ? "Холбогдсон" : "Холбоогүй")
+            </div>
+            <div class="last-update">
+                Сүүлчийн шинэчлэл: @LastUpdateTime.ToString("HH:mm:ss")
+            </div>
+        </div>
+    </footer>
 </div>
+
+@code {
+    public bool IsConnected { get; set; } = false;
+    public DateTime LastUpdateTime { get; set; } = DateTime.Now;
+
+    protected override void OnInitialized()
+    {
+        // Цагийг секунд тутам шинэчлэх
+        var timer = new System.Timers.Timer(1000);
+        timer.Elapsed += (sender, e) => InvokeAsync(StateHasChanged);
+        timer.Start();
+    }
+
+    public void UpdateConnectionStatus(bool connected)
+    {
+        IsConnected = connected;
+        LastUpdateTime = DateTime.Now;
+        InvokeAsync(StateHasChanged);
+    }
+
+    public void UpdateLastUpdateTime()
+    {
+        LastUpdateTime = DateTime.Now;
+        InvokeAsync(StateHasChanged);
+    }
+}
+
+<style>
+    .flight-display {
+        height: 100vh;
+        display: flex;
+        flex-direction: column;
+        background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+        color: white;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    .display-header {
+        background: rgba(0, 0, 0, 0.3);
+        padding: 20px;
+        border-bottom: 2px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .header-content {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        max-width: 1200px;
+        margin: 0 auto;
+    }
+
+    .logo-section h1 {
+        margin: 0;
+        font-size: 2.5rem;
+        text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+    }
+
+    .time-section {
+        text-align: right;
+    }
+
+    .current-time {
+        font-size: 3rem;
+        font-weight: bold;
+        text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+    }
+
+    .current-date {
+        font-size: 1.2rem;
+        opacity: 0.9;
+    }
+
+    .display-main {
+        flex: 1;
+        overflow: auto;
+        padding: 20px;
+    }
+
+    .display-footer {
+        background: rgba(0, 0, 0, 0.3);
+        padding: 10px 20px;
+        border-top: 2px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .footer-content {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        max-width: 1200px;
+        margin: 0 auto;
+    }
+
+    .connection-status {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .status-indicator {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        display: inline-block;
+    }
+
+    .status-indicator.connected {
+        background-color: #4CAF50;
+        box-shadow: 0 0 8px rgba(76, 175, 80, 0.6);
+        animation: pulse 2s infinite;
+    }
+
+    .status-indicator.disconnected {
+        background-color: #f44336;
+    }
+
+    .last-update {
+        font-size: 0.9rem;
+        opacity: 0.8;
+    }
+
+    @@keyframes pulse {
+        0% {
+            box-shadow: 0 0 0 0 rgba(76, 175, 80, 0.7);
+        }
+        70% {
+            box-shadow: 0 0 0 10px rgba(76, 175, 80, 0);
+        }
+        100% {
+            box-shadow: 0 0 0 0 rgba(76, 175, 80, 0);
+        }
+    }
+
+    @@media (max-width: 768px) {
+        .header-content {
+            flex-direction: column;
+            gap: 20px;
+            text-align: center;
+        }
+
+        .logo-section h1 {
+            font-size: 2rem;
+        }
+
+        .current-time {
+            font-size: 2rem;
+        }
+
+        .footer-content {
+            flex-direction: column;
+            gap: 10px;
+            text-align: center;
+        }
+    }
+</style>

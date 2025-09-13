@@ -2,10 +2,21 @@
 
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
-    <TargetFramework>net8.0-windows</TargetFramework>
+    <TargetFramework>net9.0-windows</TargetFramework>
     <Nullable>enable</Nullable>
     <UseWindowsForms>true</UseWindowsForms>
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="8.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\FlightSystem.Core\FlightSystem.Core.csproj" />
+    <ProjectReference Include="..\FlightSystem.Data\FlightSystem.Data.csproj" />
+    <ProjectReference Include="..\FlightSystem.Server\FlightSystem.Server.csproj" />
+    <ProjectReference Include="..\FlightSystem.Shared\FlightSystem.Shared.csproj" />
+  </ItemGroup>
 
 </Project>

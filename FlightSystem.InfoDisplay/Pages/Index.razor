@@ -1,9 +1,513 @@
 ﻿@page "/"
+@using Microsoft.AspNetCore.SignalR.Client
+@using FlightSystem.Shared.DTOs.Response
+@using FlightSystem.Shared.DTOs.Common
+@using System.Text.Json
+@inject IHttpClientFactory HttpClientFactory
+@inject IJSRuntime JSRuntime
+@implements IAsyncDisposable
 
-<PageTitle>Index</PageTitle>
+<div class="flights-display">
+    <div class="display-title">
+        <h2>Өнөөдрийн нислэгүүд</h2>
+        <div class="flight-count">
+            Нийт: @flights.Count | Идэвхтэй: @flights.Count(f => f.Status != "Ниссэн" && f.Status != "Цуцалсан")
+        </div>
+    </div>
 
-<h1>Hello, world!</h1>
+    @if (!flights.Any())
+    {
+        <div class="loading-display">
+            <div class="loading-spinner"></div>
+            <p>Нислэгүүдийн мэдээлэл ачаалж байна...</p>
+        </div>
+    }
+    else
+    {
+        <div class="flights-grid">
+            @foreach (var flight in flights.OrderBy(f => f.ScheduledDeparture))
+            {
+                <div class="flight-card @GetStatusClass(flight.Status)">
+                    <div class="flight-header">
+                        <div class="flight-number">@flight.FlightNumber</div>
+                        <div class="flight-route">@flight.DepartureAirport → @flight.ArrivalAirport</div>
+                    </div>
+                    
+                    <div class="flight-times">
+                        <div class="time-item">
+                            <span class="time-label">Хөөрөх:</span>
+                            <span class="time-value">@flight.ScheduledDeparture.ToString("HH:mm")</span>
+                        </div>
+                        <div class="time-item">
+                            <span class="time-label">Ирэх:</span>
+                            <span class="time-value">@flight.ScheduledArrival.ToString("HH:mm")</span>
+                        </div>
+                    </div>
+                    
+                    <div class="flight-details">
+                        <div class="detail-item">
+                            <span class="detail-label">Хаалга:</span>
+                            <span class="detail-value">@(flight.GateNumber ?? "Тодорхойгүй")</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Онгоц:</span>
+                            <span class="detail-value">@flight.AircraftType</span>
+                        </div>
+                    </div>
+                    
+                    <div class="flight-status">
+                        <div class="status-badge @GetStatusClass(flight.Status)">
+                            @flight.Status
+                        </div>
+                    </div>
 
-Welcome to your new app.
+                    @if (flight.Status == "Хойшилсон")
+                    {
+                        <div class="delay-notice">
+                            ⚠️ Хойшилсон
+                        </div>
+                    }
+                    
+                    @if (flight.Status == "Цуцалсан")
+                    {
+                        <div class="cancelled-notice">
+                            ❌ Цуцлагдсан
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+    }
+</div>
 
-<SurveyPrompt Title="How is Blazor working for you?" />
+@code {
+    private List<FlightInfoDto> flights = new();
+    private HubConnection? hubConnection;
+    private readonly string serverUrl = "https://localhost:7261";
+    private HttpClient? httpClient;
+    private bool IsPrerendering => !OperatingSystem.IsBrowser();
+    private bool isConnected = false;
+    private DateTime lastUpdateTime = DateTime.Now;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // HTTP клиентийг тохируулах
+        httpClient = HttpClientFactory.CreateClient("FlightSystem");
+        
+        // Эхний нислэгүүдийг ачаалах
+        await LoadFlights();
+        
+        // 30 секунд тутам шинэчлэх
+        _ = Task.Run(async () =>
+        {
+            while (true)
+            {
+                await Task.Delay(30000);
+                await InvokeAsync(async () =>
+                {
+                    await LoadFlights();
+                    StateHasChanged();
+                });
+            }
+        });
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            // SignalR холболт үүсгэх (зөвхөн эхний render-ийн дараа)
+            await SetupSignalRConnection();
+        }
+    }
+
+    private async Task SetupSignalRConnection()
+    {
+        try
+        {
+            hubConnection = new HubConnectionBuilder()
+                .WithUrl($"{serverUrl}/flightHub")
+                .WithAutomaticReconnect()
+                .Build();
+
+            hubConnection.On<FlightInfoDto>("FlightUpdated", OnFlightUpdated);
+            hubConnection.On<string>("SystemMessage", OnSystemMessage);
+
+            // Connection state change handlers
+            hubConnection.Closed += OnConnectionClosed;
+            hubConnection.Reconnecting += OnReconnecting;
+            hubConnection.Reconnected += OnReconnected;
+
+            await hubConnection.StartAsync();
+            isConnected = true;
+            await InvokeAsync(StateHasChanged);
+            
+            // Only log to console if not prerendering
+            if (!IsPrerendering)
+            {
+                await JSRuntime.InvokeVoidAsync("console.log", "SignalR холболт амжилттай үүслээ");
+            }
+        }
+        catch (Exception ex)
+        {
+            isConnected = false;
+            await InvokeAsync(StateHasChanged);
+            
+            // Only log to console if not prerendering
+            if (!IsPrerendering)
+            {
+                await JSRuntime.InvokeVoidAsync("console.error", $"SignalR холболт амжилтгүй: {ex.Message}");
+            }
+        }
+    }
+
+    private Task OnConnectionClosed(Exception? exception)
+    {
+        isConnected = false;
+        InvokeAsync(StateHasChanged);
+        return Task.CompletedTask;
+    }
+
+    private Task OnReconnecting(Exception? exception)
+    {
+        isConnected = false;
+        InvokeAsync(StateHasChanged);
+        return Task.CompletedTask;
+    }
+
+    private Task OnReconnected(string? connectionId)
+    {
+        isConnected = true;
+        InvokeAsync(StateHasChanged);
+        return Task.CompletedTask;
+    }
+
+    private async Task LoadFlights()
+    {
+        try
+        {
+            if (httpClient == null) return;
+            
+            var today = DateTime.Today;
+            var response = await httpClient.GetAsync($"/api/flight/date/{today:yyyy-MM-dd}");
+            
+            if (response.IsSuccessStatusCode)
+            {
+                var content = await response.Content.ReadAsStringAsync();
+                var result = JsonSerializer.Deserialize<ApiResponseDto<FlightInfoDto[]>>(
+                    content, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+                if (result?.Success == true && result.Data != null)
+                {
+                    flights = result.Data.ToList();
+                    lastUpdateTime = DateTime.Now;
+                    StateHasChanged();
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            // Only log to console if not prerendering
+            if (!IsPrerendering)
+            {
+                await JSRuntime.InvokeVoidAsync("console.error", $"Нислэгүүд ачаалахад алдаа: {ex.Message}");
+            }
+        }
+    }
+
+    private void OnFlightUpdated(FlightInfoDto updatedFlight)
+    {
+        InvokeAsync(() =>
+        {
+            var existingFlight = flights.FirstOrDefault(f => f.Id == updatedFlight.Id);
+            if (existingFlight != null)
+            {
+                var index = flights.IndexOf(existingFlight);
+                flights[index] = updatedFlight;
+                StateHasChanged();
+            }
+        });
+    }
+
+    private void OnSystemMessage(string message)
+    {
+        InvokeAsync(() =>
+        {
+            // Only log to console if not prerendering
+            if (!IsPrerendering)
+            {
+                JSRuntime.InvokeVoidAsync("console.log", $"Систем: {message}");
+            }
+        });
+    }
+
+    private string GetStatusClass(string status)
+    {
+        return status switch
+        {
+            "Төлөвлөсөн" => "status-scheduled",
+            "Бүртгэж байна" => "status-checkin-open",
+            "Бүртгэл хаагдсан" => "status-checkin-closed",
+            "Онгоцонд сууж байна" => "status-boarding",
+            "Сүүлчийн дуудлага" => "status-last-call",
+            "Хаалга хаагдсан" => "status-gate-closed",
+            "Ниссэн" => "status-departed",
+            "Хойшилсон" => "status-delayed",
+            "Цуцалсан" => "status-cancelled",
+            _ => "status-unknown"
+        };
+    }
+
+    [JSInvokable]
+    public static async Task RefreshData()
+    {
+        // This method is called from JavaScript to refresh data
+        // The actual refresh logic is handled by the component's own timer
+        await Task.CompletedTask;
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (hubConnection is not null)
+        {
+            await hubConnection.DisposeAsync();
+        }
+    }
+}
+
+<style>
+    .flights-display {
+        max-width: 1200px;
+        margin: 0 auto;
+    }
+
+    .display-title {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 30px;
+        padding: 20px;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 15px;
+        backdrop-filter: blur(10px);
+    }
+
+    .connection-status {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 1rem;
+        font-weight: 500;
+    }
+
+    .status-indicator {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        display: inline-block;
+    }
+
+    .status-indicator.connected {
+        background-color: #4CAF50;
+        box-shadow: 0 0 10px rgba(76, 175, 80, 0.5);
+    }
+
+    .status-indicator.disconnected {
+        background-color: #F44336;
+        box-shadow: 0 0 10px rgba(244, 67, 54, 0.5);
+    }
+
+    .display-title h2 {
+        margin: 0;
+        font-size: 2rem;
+        text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+    }
+
+    .flight-count {
+        font-size: 1.2rem;
+        opacity: 0.9;
+    }
+
+    .loading-display {
+        text-align: center;
+        padding: 60px 20px;
+    }
+
+    .loading-spinner {
+        width: 50px;
+        height: 50px;
+        border: 5px solid rgba(255, 255, 255, 0.3);
+        border-top: 5px solid white;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+        margin: 0 auto 20px;
+    }
+
+    @@keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+
+    .flights-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+        gap: 20px;
+    }
+
+    .flight-card {
+        background: rgba(255, 255, 255, 0.15);
+        border-radius: 20px;
+        padding: 25px;
+        backdrop-filter: blur(10px);
+        border: 2px solid rgba(255, 255, 255, 0.2);
+        transition: all 0.3s ease;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .flight-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2);
+    }
+
+    .flight-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: linear-gradient(90deg, #4CAF50, #2196F3, #FF9800, #F44336);
+    }
+
+    .flight-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+    }
+
+    .flight-number {
+        font-size: 2rem;
+        font-weight: bold;
+        text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+    }
+
+    .flight-route {
+        font-size: 1.3rem;
+        opacity: 0.9;
+    }
+
+    .flight-times, .flight-details {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 15px;
+    }
+
+    .time-item, .detail-item {
+        text-align: center;
+        flex: 1;
+    }
+
+    .time-label, .detail-label {
+        display: block;
+        font-size: 0.9rem;
+        opacity: 0.8;
+        margin-bottom: 5px;
+    }
+
+    .time-value {
+        display: block;
+        font-size: 1.8rem;
+        font-weight: bold;
+        text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
+    }
+
+    .detail-value {
+        display: block;
+        font-size: 1.1rem;
+        font-weight: 500;
+    }
+
+    .flight-status {
+        text-align: center;
+        margin-top: 20px;
+    }
+
+    .status-badge {
+        padding: 8px 20px;
+        border-radius: 25px;
+        font-weight: bold;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        font-size: 0.9rem;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    }
+
+    /* Төлвийн өнгөнүүд */
+    .status-scheduled { background: linear-gradient(45deg, #9E9E9E, #757575); }
+    .status-checkin-open { background: linear-gradient(45deg, #4CAF50, #388E3C); }
+    .status-checkin-closed { background: linear-gradient(45deg, #FF9800, #F57C00); }
+    .status-boarding { background: linear-gradient(45deg, #2196F3, #1976D2); }
+    .status-last-call { background: linear-gradient(45deg, #FF5722, #D84315); animation: pulse-urgent 1.5s infinite; }
+    .status-gate-closed { background: linear-gradient(45deg, #795548, #5D4037); }
+    .status-departed { background: linear-gradient(45deg, #607D8B, #455A64); }
+    .status-delayed { background: linear-gradient(45deg, #E91E63, #C2185B); animation: pulse-warning 2s infinite; }
+    .status-cancelled { background: linear-gradient(45deg, #F44336, #D32F2F); }
+
+    .delay-notice, .cancelled-notice {
+        background: rgba(255, 0, 0, 0.2);
+        color: #fff;
+        padding: 8px 15px;
+        border-radius: 10px;
+        text-align: center;
+        margin-top: 15px;
+        font-weight: bold;
+        animation: flash 1s infinite alternate;
+    }
+
+    @@keyframes pulse-urgent {
+        0%, 100% { transform: scale(1); }
+        50% { transform: scale(1.05); }
+    }
+
+    @@keyframes pulse-warning {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.7; }
+    }
+
+    @@keyframes flash {
+        0% { background-color: rgba(255, 0, 0, 0.2); }
+        100% { background-color: rgba(255, 0, 0, 0.4); }
+    }
+
+    @@media (max-width: 768px) {
+        .flights-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .display-title {
+            flex-direction: column;
+            gap: 10px;
+            text-align: center;
+        }
+
+        .flight-header {
+            flex-direction: column;
+            gap: 10px;
+            text-align: center;
+        }
+
+        .flight-number {
+            font-size: 1.5rem;
+        }
+
+        .flight-route {
+            font-size: 1.1rem;
+        }
+
+        .time-value {
+            font-size: 1.5rem;
+        }
+    }
+</style>

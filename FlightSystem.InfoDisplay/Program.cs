@@ -1,31 +1,35 @@
-using FlightSystem.InfoDisplay.Data;
-using Microsoft.AspNetCore.Components;
-using Microsoft.AspNetCore.Components.Web;
-
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
+// Blazor Server сервисүүд нэмэх
 builder.Services.AddRazorPages();
 builder.Services.AddServerSideBlazor();
-builder.Services.AddSingleton<WeatherForecastService>();
+
+// HttpClient тохируулах
+builder.Services.AddHttpClient("FlightSystem", client =>
+{
+    client.BaseAddress = new Uri("https://localhost:7261");
+    client.Timeout = TimeSpan.FromSeconds(30);
+});
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
+// HTTP pipeline тохируулах
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Error");
-    // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
     app.UseHsts();
 }
 
 app.UseHttpsRedirection();
-
 app.UseStaticFiles();
-
 app.UseRouting();
 
+// Blazor Hub маршрут нэмэх
 app.MapBlazorHub();
 app.MapFallbackToPage("/_Host");
+
+Console.WriteLine("🛫 Нислэгийн мэдээллийн дэлгэц эхэллээ...");
+Console.WriteLine("📺 Веб хуудас: https://localhost:7285");
+Console.WriteLine("🔗 API сервер: https://localhost:7261");
 
 app.Run();
