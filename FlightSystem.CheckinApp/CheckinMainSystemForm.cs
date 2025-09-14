@@ -1078,62 +1078,62 @@ namespace FlightSystem.CheckinApp
         {
             try
             {
-                // Validate inputs
+                // Оролтыг шалгах
                 if (cmbTestFlight.SelectedItem == null)
                 {
-                    MessageBox.Show("Please select a flight.", "Validation Error", 
+                    MessageBox.Show("Нислэг сонгоно уу.", "Шалгах алдаа",
                         MessageBoxButtons.OK, MessageBoxIcon.Warning);
                     return;
                 }
 
                 if (string.IsNullOrWhiteSpace(txtTestSeatNumber.Text))
                 {
-                    MessageBox.Show("Please enter a seat number.", "Validation Error", 
+                    MessageBox.Show("Суудлын дугаарыг оруулна уу.", "Шалгах алдаа",
                         MessageBoxButtons.OK, MessageBoxIcon.Warning);
                     return;
                 }
 
                 if (string.IsNullOrWhiteSpace(txtTestPassenger1.Text))
                 {
-                    MessageBox.Show("Please enter Passenger 1 passport number.", "Validation Error", 
+                    MessageBox.Show("Зорчигч 1-ийн паспортын дугаарыг оруулна уу.", "Шалгах алдаа",
                         MessageBoxButtons.OK, MessageBoxIcon.Warning);
                     return;
                 }
 
                 if (string.IsNullOrWhiteSpace(txtTestPassenger2.Text))
                 {
-                    MessageBox.Show("Please enter Passenger 2 passport number.", "Validation Error", 
+                    MessageBox.Show("Зорчигч 2-ийн паспортын дугаарыг оруулна уу.", "Шалгах алдаа",
                         MessageBoxButtons.OK, MessageBoxIcon.Warning);
                     return;
                 }
 
-                // Get selected flight
+                // Сонгосон нислэг авах
                 var selectedItem = cmbTestFlight.SelectedItem as FlightDisplayItem;
                 if (selectedItem == null)
                 {
-                    MessageBox.Show("Invalid flight selection.", "Error", 
+                    MessageBox.Show("Буруу нислэг сонгогдсон байна.", "Алдаа",
                         MessageBoxButtons.OK, MessageBoxIcon.Error);
                     return;
                 }
                 var selectedFlight = selectedItem.Flight;
 
-                // Disable button during test
+                // Туршилт эхлэхэд товчийг идэвхгүй болгох
                 btnRunConcurrentTest.Enabled = false;
-                btnRunConcurrentTest.Text = "🔄 Running Test...";
+                btnRunConcurrentTest.Text = "🔄 Туршилт ажиллаж байна...";
 
-                // Clear previous results
+                // Өмнөх үр дүнг цэвэрлэх
                 txtTestResults.Clear();
 
-                // Add test start info
-                txtTestResults.AppendText($"=== CONCURRENT SEAT ASSIGNMENT TEST ===\r\n");
-                txtTestResults.AppendText($"Test Started: {DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}\r\n");
-                txtTestResults.AppendText($"Flight: {selectedFlight.FlightNumber}\r\n");
-                txtTestResults.AppendText($"Seat: {txtTestSeatNumber.Text}\r\n");
-                txtTestResults.AppendText($"Passenger 1: {txtTestPassenger1.Text}\r\n");
-                txtTestResults.AppendText($"Passenger 2: {txtTestPassenger2.Text}\r\n");
+                // Туршилтын эхлэл бичих
+                txtTestResults.AppendText($"=== ЗЭРЭГЦЭЭ СУУДАЛ ОНООХ ТУРШИЛТ ===\r\n");
+                txtTestResults.AppendText($"Туршилт эхэлсэн: {DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}\r\n");
+                txtTestResults.AppendText($"Нислэг: {selectedFlight.FlightNumber}\r\n");
+                txtTestResults.AppendText($"Суудал: {txtTestSeatNumber.Text}\r\n");
+                txtTestResults.AppendText($"Зорчигч 1: {txtTestPassenger1.Text}\r\n");
+                txtTestResults.AppendText($"Зорчигч 2: {txtTestPassenger2.Text}\r\n");
                 txtTestResults.AppendText($"\r\n");
 
-                // Run the concurrent test
+                // Туршилтыг ажиллуулах
                 var testResult = await _checkinService.TestConcurrentSeatAssignmentAsync(
                     selectedFlight.Id,
                     txtTestSeatNumber.Text,
@@ -1144,68 +1144,68 @@ namespace FlightSystem.CheckinApp
                 if (testResult.IsSuccess && testResult.Data != null)
                 {
                     var result = testResult.Data;
-                    
-                    txtTestResults.AppendText($"✅ TEST COMPLETED SUCCESSFULLY\r\n");
-                    txtTestResults.AppendText($"Test ID: {result.TestId}\r\n");
-                    txtTestResults.AppendText($"Total Duration: {(result.TestEndTime - result.TestStartTime).TotalMilliseconds:F2}ms\r\n");
+
+                    txtTestResults.AppendText($"✅ ТУРШИЛТ АМЖИЛТТАЙ ДУУСЛАА\r\n");
+                    txtTestResults.AppendText($"Туршилтын ID: {result.TestId}\r\n");
+                    txtTestResults.AppendText($"Нийт хугацаа: {(result.TestEndTime - result.TestStartTime).TotalMilliseconds:F2}мс\r\n");
                     txtTestResults.AppendText($"\r\n");
-                    
-                    txtTestResults.AppendText($"=== PASSENGER 1 RESULTS ===\r\n");
-                    txtTestResults.AppendText($"Passport: {result.Passenger1Result.PassportNumber}\r\n");
-                    txtTestResults.AppendText($"Success: {(result.Passenger1Result.Success ? "✅ YES" : "❌ NO")}\r\n");
-                    txtTestResults.AppendText($"Processing Time: {result.Passenger1Result.ProcessingTimeMs}ms\r\n");
-                    txtTestResults.AppendText($"Start Time: {result.Passenger1Result.RequestStartTime:HH:mm:ss.fff}\r\n");
-                    txtTestResults.AppendText($"End Time: {result.Passenger1Result.RequestEndTime:HH:mm:ss.fff}\r\n");
+
+                    txtTestResults.AppendText($"=== ЗОРЧИГЧ 1-ИЙН ҮР ДҮН ===\r\n");
+                    txtTestResults.AppendText($"Паспорт: {result.Passenger1Result.PassportNumber}\r\n");
+                    txtTestResults.AppendText($"Амжилт: {(result.Passenger1Result.Success ? "✅ ТИЙМ" : "❌ ҮГҮЙ")}\r\n");
+                    txtTestResults.AppendText($"Боловсруулсан хугацаа: {result.Passenger1Result.ProcessingTimeMs}мс\r\n");
+                    txtTestResults.AppendText($"Эхэлсэн цаг: {result.Passenger1Result.RequestStartTime:HH:mm:ss.fff}\r\n");
+                    txtTestResults.AppendText($"Дууссан цаг: {result.Passenger1Result.RequestEndTime:HH:mm:ss.fff}\r\n");
                     if (!string.IsNullOrEmpty(result.Passenger1Result.ErrorMessage))
                     {
-                        txtTestResults.AppendText($"Error: {result.Passenger1Result.ErrorMessage}\r\n");
+                        txtTestResults.AppendText($"Алдаа: {result.Passenger1Result.ErrorMessage}\r\n");
                     }
                     if (!string.IsNullOrEmpty(result.Passenger1Result.SeatAssignmentId))
                     {
-                        txtTestResults.AppendText($"Seat Assignment ID: {result.Passenger1Result.SeatAssignmentId}\r\n");
+                        txtTestResults.AppendText($"Суудал оноолтын ID: {result.Passenger1Result.SeatAssignmentId}\r\n");
                     }
                     txtTestResults.AppendText($"\r\n");
-                    
-                    txtTestResults.AppendText($"=== PASSENGER 2 RESULTS ===\r\n");
-                    txtTestResults.AppendText($"Passport: {result.Passenger2Result.PassportNumber}\r\n");
-                    txtTestResults.AppendText($"Success: {(result.Passenger2Result.Success ? "✅ YES" : "❌ NO")}\r\n");
-                    txtTestResults.AppendText($"Processing Time: {result.Passenger2Result.ProcessingTimeMs}ms\r\n");
-                    txtTestResults.AppendText($"Start Time: {result.Passenger2Result.RequestStartTime:HH:mm:ss.fff}\r\n");
-                    txtTestResults.AppendText($"End Time: {result.Passenger2Result.RequestEndTime:HH:mm:ss.fff}\r\n");
+
+                    txtTestResults.AppendText($"=== ЗОРЧИГЧ 2-ИЙН ҮР ДҮН ===\r\n");
+                    txtTestResults.AppendText($"Паспорт: {result.Passenger2Result.PassportNumber}\r\n");
+                    txtTestResults.AppendText($"Амжилт: {(result.Passenger2Result.Success ? "✅ ТИЙМ" : "❌ ҮГҮЙ")}\r\n");
+                    txtTestResults.AppendText($"Боловсруулсан хугацаа: {result.Passenger2Result.ProcessingTimeMs}мс\r\n");
+                    txtTestResults.AppendText($"Эхэлсэн цаг: {result.Passenger2Result.RequestStartTime:HH:mm:ss.fff}\r\n");
+                    txtTestResults.AppendText($"Дууссан цаг: {result.Passenger2Result.RequestEndTime:HH:mm:ss.fff}\r\n");
                     if (!string.IsNullOrEmpty(result.Passenger2Result.ErrorMessage))
                     {
-                        txtTestResults.AppendText($"Error: {result.Passenger2Result.ErrorMessage}\r\n");
+                        txtTestResults.AppendText($"Алдаа: {result.Passenger2Result.ErrorMessage}\r\n");
                     }
                     if (!string.IsNullOrEmpty(result.Passenger2Result.SeatAssignmentId))
                     {
-                        txtTestResults.AppendText($"Seat Assignment ID: {result.Passenger2Result.SeatAssignmentId}\r\n");
+                        txtTestResults.AppendText($"Суудал оноолтын ID: {result.Passenger2Result.SeatAssignmentId}\r\n");
                     }
                     txtTestResults.AppendText($"\r\n");
-                    
-                    txtTestResults.AppendText($"=== SUMMARY ===\r\n");
-                    txtTestResults.AppendText($"Winner: {result.WinnerPassenger}\r\n");
-                    txtTestResults.AppendText($"Summary: {result.Summary}\r\n");
+
+                    txtTestResults.AppendText($"=== ДҮГНЭЛТ ===\r\n");
+                    txtTestResults.AppendText($"Ялагч зорчигч: {result.WinnerPassenger}\r\n");
+                    txtTestResults.AppendText($"Товч тайлбар: {result.Summary}\r\n");
                     txtTestResults.AppendText($"\r\n");
-                    
-                    txtTestResults.AppendText($"Test Completed: {DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}\r\n");
+
+                    txtTestResults.AppendText($"Туршилт дууссан: {DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}\r\n");
                 }
                 else
                 {
-                    txtTestResults.AppendText($"❌ TEST FAILED\r\n");
-                    txtTestResults.AppendText($"Error: {testResult.ErrorMessage}\r\n");
+                    txtTestResults.AppendText($"❌ ТУРШИЛТ АМЖИЛТГҮЙ БОЛЛОО\r\n");
+                    txtTestResults.AppendText($"Алдаа: {testResult.ErrorMessage}\r\n");
                 }
             }
             catch (Exception ex)
             {
-                txtTestResults.AppendText($"❌ TEST ERROR\r\n");
+                txtTestResults.AppendText($"❌ ТУРШИЛТЫН АЛДАА\r\n");
                 txtTestResults.AppendText($"Exception: {ex.Message}\r\n");
                 txtTestResults.AppendText($"Stack Trace: {ex.StackTrace}\r\n");
             }
             finally
             {
-                // Re-enable button
+                // Товчийг дахин идэвхжүүлэх
                 btnRunConcurrentTest.Enabled = true;
-                btnRunConcurrentTest.Text = "🚀 Run Concurrent Test";
+                btnRunConcurrentTest.Text = "🚀 Зэрэгцээ туршилт ажиллуулах";
             }
         }
 
