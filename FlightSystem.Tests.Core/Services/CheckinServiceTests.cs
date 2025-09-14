@@ -70,29 +70,43 @@ public class CheckinServiceTests
     }
 
     [Fact]
-    public async Task CheckinPassengerAsync_FlightNotFound_ShouldThrowFlightNotFoundException()
+    public async Task CheckinPassengerAsync_FlightNotFound_ShouldReturnErrorResult()
     {
         // Arrange
         var request = TestDataHelper.CreateValidCheckinRequest();
         _mockFlightRepo.Setup(r => r.GetByFlightNumberAsync(It.IsAny<string>()))
                       .ReturnsAsync((Flight)null);
 
-        // Act & Assert
-        await Assert.ThrowsAsync<FlightNotFoundException>(() => 
-            _checkinService.CheckinPassengerAsync(request));
+        // Act
+        var result = await _checkinService.CheckinPassengerAsync(request);
+
+        // Assert
+        result.Should().NotBeNull();
+        result.IsSuccess.Should().BeFalse();
+        result.Message.Should().Contain("Check-in амжилтгүй боллоо");
+        result.Errors.Should().NotBeEmpty();
     }
 
     [Fact]
-    public async Task CheckinPassengerAsync_PassengerNotFound_ShouldThrowPassengerNotFoundException()
+    public async Task CheckinPassengerAsync_PassengerNotFound_ShouldReturnErrorResult()
     {
         // Arrange
         var request = TestDataHelper.CreateValidCheckinRequest();
+        var flight = TestDataHelper.CreateTestFlight();
+        
+        _mockFlightRepo.Setup(r => r.GetByFlightNumberAsync(It.IsAny<string>()))
+                      .ReturnsAsync(flight);
         _mockPassengerRepo.Setup(r => r.GetByPassportNumberAsync(It.IsAny<string>()))
                          .ReturnsAsync((Passenger)null);
 
-        // Act & Assert
-        await Assert.ThrowsAsync<PassengerNotFoundException>(() => 
-            _checkinService.CheckinPassengerAsync(request));
+        // Act
+        var result = await _checkinService.CheckinPassengerAsync(request);
+
+        // Assert
+        result.Should().NotBeNull();
+        result.IsSuccess.Should().BeFalse();
+        result.Message.Should().Contain("Check-in амжилтгүй боллоо");
+        result.Errors.Should().NotBeEmpty();
     }
 
     [Fact]
@@ -128,8 +142,21 @@ public class CheckinServiceTests
         };
 
         var flightPassenger = TestDataHelper.CreateTestFlightPassenger();
+        var seat = TestDataHelper.CreateTestSeat();
+        var passenger = TestDataHelper.CreateTestPassenger();
+        var seatAssignment = TestDataHelper.CreateTestSeatAssignment();
+
         _mockFlightPassengerRepo.Setup(r => r.GetByIdAsync(It.IsAny<int>()))
                                .ReturnsAsync(flightPassenger);
+        
+        _mockSeatRepo.Setup(r => r.GetByIdAsync(It.IsAny<int>()))
+                    .ReturnsAsync(seat);
+        
+        _mockPassengerRepo.Setup(r => r.GetByIdAsync(It.IsAny<int>()))
+                         .ReturnsAsync(passenger);
+        
+        _mockSeatAssignmentRepo.Setup(r => r.AssignSeatAsync(It.IsAny<SeatAssignment>()))
+                               .ReturnsAsync(seatAssignment);
 
         // Act
         var result = await _checkinService.AssignSeatAsync(request);
@@ -179,6 +206,11 @@ public class CheckinServiceTests
         _mockSeatRepo.Setup(r => r.GetByIdAsync(It.IsAny<int>()))
                     .ReturnsAsync(seat);
 
+        var flightPassenger = TestDataHelper.CreateTestFlightPassenger();
+        flightPassenger.IsCheckedIn = true; // Mark as checked in
+        _mockFlightPassengerRepo.Setup(r => r.CheckinPassengerAsync(It.IsAny<int>(), It.IsAny<int>()))
+                               .ReturnsAsync(flightPassenger);
+
         _mockBoardingPassRepo.Setup(r => r.AddAsync(It.IsAny<BoardingPass>()))
                            .ReturnsAsync((BoardingPass bp) => { bp.Id = 1; return bp; });
     }
@@ -190,6 +222,9 @@ public class CheckinServiceTests
         var flightPassenger = TestDataHelper.CreateTestFlightPassenger();
 
         _mockFlightRepo.Setup(r => r.GetByFlightNumberAsync(It.IsAny<string>()))
+                      .ReturnsAsync(flight);
+        
+        _mockFlightRepo.Setup(r => r.GetByIdAsync(It.IsAny<int>()))
                       .ReturnsAsync(flight);
         
         _mockPassengerRepo.Setup(r => r.GetByPassportNumberAsync(It.IsAny<string>()))

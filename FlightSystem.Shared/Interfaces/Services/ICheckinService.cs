@@ -133,5 +133,12 @@ namespace FlightSystem.Shared.Interfaces.Services
         /// <param name="bookingReference"></param>
         /// <returns></returns>
         Task<FlightPassengerDto?> GetFlightPassengerByBookingReferenceAsync(string bookingReference);
+
+        /// <summary>
+        /// Concurrent seat assignment test
+        /// </summary>
+        /// <param name="request"></param>
+        /// <returns></returns>
+        Task<ConcurrentSeatTestResultDto> TestConcurrentSeatAssignmentAsync(ConcurrentSeatTestRequestDto request);
     }
 }

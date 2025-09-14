@@ -315,5 +315,35 @@ public class CheckinController : ControllerBase
             });
         }
     }
+
+    /// <summary>
+    /// Concurrent seat assignment test
+    /// </summary>
+    /// <param name="request">Concurrent seat test request</param>
+    /// <returns>Concurrent seat test result</returns>
+    [HttpPost("test-concurrent-seat")]
+    public async Task<ActionResult<ApiResponseDto<ConcurrentSeatTestResultDto>>> TestConcurrentSeatAssignment([FromBody] ConcurrentSeatTestRequestDto request)
+    {
+        try
+        {
+            var result = await _checkinService.TestConcurrentSeatAssignmentAsync(request);
+            return Ok(new ApiResponseDto<ConcurrentSeatTestResultDto>
+            {
+                Success = true,
+                Data = result,
+                Message = "Concurrent seat assignment test completed successfully"
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error during concurrent seat assignment test");
+            return StatusCode(500, new ApiResponseDto<ConcurrentSeatTestResultDto>
+            {
+                Success = false,
+                Message = "Concurrent seat assignment test failed",
+                Errors = [ex.Message]
+            });
+        }
+    }
 }
 

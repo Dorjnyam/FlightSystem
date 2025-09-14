@@ -470,7 +470,7 @@ namespace FlightSystem.Shared.Services
                 validation.IsValid = true;
                 validation.IsBooked = true;
                 validation.IsCheckedIn = flightPassenger.IsCheckedIn;
-                validation.FlightPassenger = MapToFlightPassengerDto(flightPassenger);
+                validation.FlightPassenger = await MapToFlightPassengerDtoWithSeatAsync(flightPassenger);
                 validation.Passenger = new PassengerDto
                 {
                     Id = passenger.Id,
@@ -558,6 +558,77 @@ namespace FlightSystem.Shared.Services
             };
         }
 
+        private async Task<FlightPassengerDto> MapToFlightPassengerDtoWithSeatAsync(FlightPassenger flightPassenger)
+        {
+            var dto = new FlightPassengerDto
+            {
+                Id = flightPassenger.Id,
+                BookingReference = flightPassenger.BookingReference,
+                IsCheckedIn = flightPassenger.IsCheckedIn,
+                CheckinTime = flightPassenger.CheckinTime,
+                SpecialRequests = flightPassenger.SpecialRequests,
+                BaggageInfo = flightPassenger.BaggageInfo
+            };
+
+            // Load passenger info
+            if (flightPassenger.Passenger != null)
+            {
+                dto.Passenger = new PassengerDto
+                {
+                    Id = flightPassenger.Passenger.Id,
+                    PassportNumber = flightPassenger.Passenger.PassportNumber,
+                    FirstName = flightPassenger.Passenger.FirstName,
+                    LastName = flightPassenger.Passenger.LastName,
+                    Nationality = flightPassenger.Passenger.Nationality,
+                    DateOfBirth = flightPassenger.Passenger.DateOfBirth,
+                    PassengerType = flightPassenger.Passenger.Type.ToString(),
+                    Email = flightPassenger.Passenger.Email,
+                    Phone = flightPassenger.Passenger.Phone
+                };
+            }
+
+            // Load flight info
+            if (flightPassenger.Flight != null)
+            {
+                dto.Flight = new FlightInfoDto
+                {
+                    Id = flightPassenger.Flight.Id,
+                    FlightNumber = flightPassenger.Flight.FlightNumber,
+                    DepartureAirport = flightPassenger.Flight.DepartureAirport,
+                    ArrivalAirport = flightPassenger.Flight.ArrivalAirport,
+                    ScheduledDeparture = flightPassenger.Flight.ScheduledDeparture,
+                    ScheduledArrival = flightPassenger.Flight.ScheduledArrival,
+                    Status = flightPassenger.Flight.Status.ToString(),
+                    GateNumber = flightPassenger.Flight.GateNumber
+                };
+            }
+
+            // Load assigned seat info
+            var seatAssignment = await _seatAssignmentRepository.GetByFlightPassengerAsync(flightPassenger.Id);
+            if (seatAssignment != null)
+            {
+                // Get seat details
+                var seat = await _seatRepository.GetByIdAsync(seatAssignment.SeatId);
+                if (seat != null)
+                {
+                    dto.AssignedSeat = new SeatInfoDto
+                    {
+                        Id = seat.Id,
+                        SeatNumber = seat.SeatNumber,
+                        Row = seat.Row,
+                        Column = seat.Column,
+                        SeatClass = seat.Class.ToString(),
+                        IsAvailable = false, // It's assigned
+                        IsWindowSeat = seat.IsWindowSeat,
+                        IsAisleSeat = seat.IsAisleSeat,
+                        IsEmergencyExit = seat.IsEmergencyExit
+                    };
+                }
+            }
+
+            return dto;
+        }
+
         private SeatAssignmentDto MapToSeatAssignmentDto(SeatAssignment seatAssignment)
         {
             return new SeatAssignmentDto
@@ -612,6 +683,178 @@ namespace FlightSystem.Shared.Services
         private string GenerateBarcodeData(GenerateBoardingPassRequestDto request)
         {
             return $"{request.FlightPassengerId:D8}{request.SeatAssignmentId:D8}";
+        }
+
+        public async Task<ConcurrentSeatTestResultDto> TestConcurrentSeatAssignmentAsync(ConcurrentSeatTestRequestDto request)
+        {
+            var testId = Guid.NewGuid().ToString();
+            var testStartTime = DateTime.UtcNow;
+            
+            _logger.LogInformation("Starting concurrent seat assignment test {TestId} for flight {FlightId}, seat {SeatNumber}", 
+                testId, request.FlightId, request.SeatNumber);
+
+            try
+            {
+                // Get flight passengers for both passengers
+                var passenger1 = await _passengerRepository.GetByPassportNumberAsync(request.Passenger1Passport);
+                var passenger2 = await _passengerRepository.GetByPassportNumberAsync(request.Passenger2Passport);
+
+                if (passenger1 == null || passenger2 == null)
+                {
+                    throw new InvalidOperationException("One or both passengers not found");
+                }
+
+                var flightPassenger1 = await _flightPassengerRepository.GetFlightPassengerAsync(request.FlightId, passenger1.Id);
+                var flightPassenger2 = await _flightPassengerRepository.GetFlightPassengerAsync(request.FlightId, passenger2.Id);
+
+                if (flightPassenger1 == null || flightPassenger2 == null)
+                {
+                    throw new InvalidOperationException("One or both passengers not booked on this flight");
+                }
+
+                // Get the flight to find aircraft ID
+                var flight = await _flightRepository.GetByIdAsync(request.FlightId);
+                if (flight == null)
+                {
+                    throw new InvalidOperationException($"Flight {request.FlightId} not found");
+                }
+
+                // Get the seat
+                var seat = await _seatRepository.GetSeatByNumberAsync(flight.AircraftId, request.SeatNumber);
+                if (seat == null)
+                {
+                    throw new InvalidOperationException($"Seat {request.SeatNumber} not found for flight {request.FlightId}");
+                }
+
+                // Create concurrent tasks to simulate simultaneous seat assignment
+                var task1 = Task.Run(async () =>
+                {
+                    var startTime = DateTime.UtcNow;
+                    try
+                    {
+                        var assignmentRequest = new AssignSeatRequestDto
+                        {
+                            FlightPassengerId = flightPassenger1.Id,
+                            SeatId = seat.Id,
+                            EmployeeId = 1, // Default employee
+                            Notes = "Concurrent test - Passenger 1"
+                        };
+
+                        var assignment = await AssignSeatAsync(assignmentRequest);
+                        return new ConcurrentPassengerResultDto
+                        {
+                            PassportNumber = request.Passenger1Passport,
+                            Success = true,
+                            SeatAssignmentId = assignment.Id.ToString(),
+                            ProcessingTimeMs = (long)(DateTime.UtcNow - startTime).TotalMilliseconds,
+                            RequestStartTime = startTime,
+                            RequestEndTime = DateTime.UtcNow
+                        };
+                    }
+                    catch (Exception ex)
+                    {
+                        return new ConcurrentPassengerResultDto
+                        {
+                            PassportNumber = request.Passenger1Passport,
+                            Success = false,
+                            ErrorMessage = ex.Message,
+                            ProcessingTimeMs = (long)(DateTime.UtcNow - startTime).TotalMilliseconds,
+                            RequestStartTime = startTime,
+                            RequestEndTime = DateTime.UtcNow
+                        };
+                    }
+                });
+
+                var task2 = Task.Run(async () =>
+                {
+                    var startTime = DateTime.UtcNow;
+                    try
+                    {
+                        var assignmentRequest = new AssignSeatRequestDto
+                        {
+                            FlightPassengerId = flightPassenger2.Id,
+                            SeatId = seat.Id,
+                            EmployeeId = 1, // Default employee
+                            Notes = "Concurrent test - Passenger 2"
+                        };
+
+                        var assignment = await AssignSeatAsync(assignmentRequest);
+                        return new ConcurrentPassengerResultDto
+                        {
+                            PassportNumber = request.Passenger2Passport,
+                            Success = true,
+                            SeatAssignmentId = assignment.Id.ToString(),
+                            ProcessingTimeMs = (long)(DateTime.UtcNow - startTime).TotalMilliseconds,
+                            RequestStartTime = startTime,
+                            RequestEndTime = DateTime.UtcNow
+                        };
+                    }
+                    catch (Exception ex)
+                    {
+                        return new ConcurrentPassengerResultDto
+                        {
+                            PassportNumber = request.Passenger2Passport,
+                            Success = false,
+                            ErrorMessage = ex.Message,
+                            ProcessingTimeMs = (long)(DateTime.UtcNow - startTime).TotalMilliseconds,
+                            RequestStartTime = startTime,
+                            RequestEndTime = DateTime.UtcNow
+                        };
+                    }
+                });
+
+                // Wait for both tasks to complete
+                await Task.WhenAll(task1, task2);
+
+                var passenger1Result = await task1;
+                var passenger2Result = await task2;
+
+                var testEndTime = DateTime.UtcNow;
+                var winnerPassenger = "None";
+                var summary = "";
+
+                if (passenger1Result.Success && passenger2Result.Success)
+                {
+                    winnerPassenger = "Both succeeded (unexpected)";
+                    summary = "Both passengers were assigned the same seat - this should not happen!";
+                }
+                else if (passenger1Result.Success)
+                {
+                    winnerPassenger = passenger1Result.PassportNumber;
+                    summary = $"Passenger 1 ({passenger1Result.PassportNumber}) won the seat assignment. Passenger 2 failed: {passenger2Result.ErrorMessage}";
+                }
+                else if (passenger2Result.Success)
+                {
+                    winnerPassenger = passenger2Result.PassportNumber;
+                    summary = $"Passenger 2 ({passenger2Result.PassportNumber}) won the seat assignment. Passenger 1 failed: {passenger1Result.ErrorMessage}";
+                }
+                else
+                {
+                    winnerPassenger = "None";
+                    summary = $"Both passengers failed. Passenger 1: {passenger1Result.ErrorMessage}, Passenger 2: {passenger2Result.ErrorMessage}";
+                }
+
+                var result = new ConcurrentSeatTestResultDto
+                {
+                    TestId = testId,
+                    TestStartTime = testStartTime,
+                    TestEndTime = testEndTime,
+                    Passenger1Result = passenger1Result,
+                    Passenger2Result = passenger2Result,
+                    WinnerPassenger = winnerPassenger,
+                    Summary = summary
+                };
+
+                _logger.LogInformation("Concurrent seat assignment test {TestId} completed. Winner: {Winner}", 
+                    testId, winnerPassenger);
+
+                return result;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error during concurrent seat assignment test {TestId}", testId);
+                throw;
+            }
         }
     }
 }

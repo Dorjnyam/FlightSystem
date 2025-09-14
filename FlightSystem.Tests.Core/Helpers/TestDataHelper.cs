@@ -130,8 +130,8 @@ public static class TestDataHelper
             ScheduledArrival = now.AddHours(4),
             Status = FlightStatus.CheckinOpen,
             GateNumber = "A5",
-            CheckinOpenTime = now.AddHours(-1),
-            CheckinCloseTime = now.AddMinutes(75),
+            CheckinOpenTime = now.AddHours(-2), // Check-in opened 2 hours ago
+            CheckinCloseTime = now.AddHours(1),  // Check-in closes in 1 hour
             BoardingTime = now.AddMinutes(90),
             CreatedByEmployeeId = employeeId,
             CreatedAt = now,

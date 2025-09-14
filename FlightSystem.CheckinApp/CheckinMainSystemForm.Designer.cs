@@ -12,6 +12,17 @@ namespace FlightSystem.CheckinApp
         private TabPage tabCheckin;
         private TabPage tabBookings;
         
+        // Concurrent Seat Test Tab
+        private TabPage tabConcurrentTest;
+        private Panel panelConcurrentTest;
+        private Label lblConcurrentTestTitle;
+        private ComboBox cmbTestFlight;
+        private TextBox txtTestSeatNumber;
+        private TextBox txtTestPassenger1;
+        private TextBox txtTestPassenger2;
+        private Button btnRunConcurrentTest;
+        private TextBox txtTestResults;
+        
         // Profile Section
         private Panel pnlProfile;
         private PictureBox picProfile;
@@ -82,6 +93,7 @@ namespace FlightSystem.CheckinApp
         private GroupBox grpCheckinActions;
         private Button btnCheckin;
         private Button btnPrintBoardingPass;
+        private Button btnOpenCheckin;
         
         // Flight Status Change Controls
         private GroupBox grpFlightStatusChange;
@@ -130,6 +142,7 @@ namespace FlightSystem.CheckinApp
             tabPassengers = new TabPage();
             tabCheckin = new TabPage();
             tabBookings = new TabPage();
+            tabConcurrentTest = new TabPage();
             pnlProfile = new Panel();
             picProfile = new PictureBox();
             lblEmployeeName = new Label();
@@ -423,15 +436,17 @@ namespace FlightSystem.CheckinApp
             
             this.pnlFlights = new Panel();
             this.pnlFlights.Dock = DockStyle.Fill;
+            this.pnlFlights.AutoScroll = true;
             this.tabFlights.Controls.Add(this.pnlFlights);
             
-            // Flights List
+            // Flights List - Top Section
             this.lstFlights = new ListView();
             this.lstFlights.Location = new Point(20, 20);
-            this.lstFlights.Size = new Size(800, 400);
+            this.lstFlights.Size = new Size(900, 300);
             this.lstFlights.FullRowSelect = true;
             this.lstFlights.GridLines = true;
             this.lstFlights.View = View.Details;
+            this.lstFlights.Font = new Font("Segoe UI", 9F);
             this.lstFlights.SelectedIndexChanged += new EventHandler(this.lstFlights_SelectedIndexChanged);
             
             this.colFlightNumber = new ColumnHeader();
@@ -440,31 +455,32 @@ namespace FlightSystem.CheckinApp
             
             this.colDeparture = new ColumnHeader();
             this.colDeparture.Text = "Departure";
-            this.colDeparture.Width = 100;
+            this.colDeparture.Width = 120;
             
             this.colArrival = new ColumnHeader();
             this.colArrival.Text = "Arrival";
-            this.colArrival.Width = 100;
+            this.colArrival.Width = 120;
             
             this.colDepartureTime = new ColumnHeader();
             this.colDepartureTime.Text = "Departure Time";
-            this.colDepartureTime.Width = 150;
+            this.colDepartureTime.Width = 180;
             
             this.colStatus = new ColumnHeader();
             this.colStatus.Text = "Status";
-            this.colStatus.Width = 100;
+            this.colStatus.Width = 120;
             
             this.lstFlights.Columns.AddRange(new ColumnHeader[] {
                 this.colFlightNumber, this.colDeparture, this.colArrival,
                 this.colDepartureTime, this.colStatus
             });
             
-            // Flight Actions
+            // Flight Actions - Right Side
             this.grpFlightActions = new GroupBox();
-            this.grpFlightActions.Text = "Actions";
+            this.grpFlightActions.Text = "Flight Actions";
             this.grpFlightActions.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
-            this.grpFlightActions.Location = new Point(840, 20);
-            this.grpFlightActions.Size = new Size(200, 200);
+            this.grpFlightActions.ForeColor = Color.FromArgb(25, 118, 210);
+            this.grpFlightActions.Location = new Point(940, 20);
+            this.grpFlightActions.Size = new Size(250, 300);
             
             this.btnAddFlight = new Button();
             this.btnAddFlight.Text = "Add Flight";
@@ -474,7 +490,7 @@ namespace FlightSystem.CheckinApp
             this.btnAddFlight.ForeColor = Color.White;
             this.btnAddFlight.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
             this.btnAddFlight.Location = new Point(20, 30);
-            this.btnAddFlight.Size = new Size(150, 35);
+            this.btnAddFlight.Size = new Size(200, 40);
             this.btnAddFlight.Click += new EventHandler(this.btnAddFlight_Click);
             
             this.btnManageFlight = new Button();
@@ -484,8 +500,8 @@ namespace FlightSystem.CheckinApp
             this.btnManageFlight.FlatStyle = FlatStyle.Flat;
             this.btnManageFlight.ForeColor = Color.White;
             this.btnManageFlight.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
-            this.btnManageFlight.Location = new Point(20, 75);
-            this.btnManageFlight.Size = new Size(150, 35);
+            this.btnManageFlight.Location = new Point(20, 85);
+            this.btnManageFlight.Size = new Size(200, 40);
             this.btnManageFlight.Enabled = false;
             this.btnManageFlight.Click += new EventHandler(this.btnManageFlight_Click);
             
@@ -496,20 +512,20 @@ namespace FlightSystem.CheckinApp
             this.btnSelectFlight.FlatStyle = FlatStyle.Flat;
             this.btnSelectFlight.ForeColor = Color.White;
             this.btnSelectFlight.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
-            this.btnSelectFlight.Location = new Point(20, 120);
-            this.btnSelectFlight.Size = new Size(150, 35);
+            this.btnSelectFlight.Location = new Point(20, 140);
+            this.btnSelectFlight.Size = new Size(200, 40);
             this.btnSelectFlight.Enabled = false;
             this.btnSelectFlight.Click += new EventHandler(this.btnSelectFlight_Click);
             
             this.btnChangeFlightStatus = new Button();
             this.btnChangeFlightStatus.Text = "Change Status";
-            this.btnChangeFlightStatus.BackColor = Color.FromArgb(255, 152, 0);
+            this.btnChangeFlightStatus.BackColor = Color.FromArgb(156, 39, 176);
             this.btnChangeFlightStatus.FlatAppearance.BorderSize = 0;
             this.btnChangeFlightStatus.FlatStyle = FlatStyle.Flat;
             this.btnChangeFlightStatus.ForeColor = Color.White;
             this.btnChangeFlightStatus.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
-            this.btnChangeFlightStatus.Location = new Point(180, 120);
-            this.btnChangeFlightStatus.Size = new Size(150, 35);
+            this.btnChangeFlightStatus.Location = new Point(20, 195);
+            this.btnChangeFlightStatus.Size = new Size(200, 40);
             this.btnChangeFlightStatus.Enabled = false;
             this.btnChangeFlightStatus.Click += new EventHandler(this.btnChangeFlightStatus_Click);
             
@@ -517,78 +533,62 @@ namespace FlightSystem.CheckinApp
                 this.btnAddFlight, this.btnManageFlight, this.btnSelectFlight, this.btnChangeFlightStatus
             });
             
-            // Flight Details
-            this.grpFlightDetails = new GroupBox();
-            this.grpFlightDetails.Text = "Flight Details";
-            this.grpFlightDetails.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
-            this.grpFlightDetails.Location = new Point(20, 440);
-            this.grpFlightDetails.Size = new Size(800, 150);
-            
-            this.txtFlightDetails = new TextBox();
-            this.txtFlightDetails.Multiline = true;
-            this.txtFlightDetails.ReadOnly = true;
-            this.txtFlightDetails.ScrollBars = ScrollBars.Vertical;
-            this.txtFlightDetails.Font = new Font("Segoe UI", 9F);
-            this.txtFlightDetails.Location = new Point(20, 30);
-            this.txtFlightDetails.Size = new Size(750, 100);
-            
-            this.grpFlightDetails.Controls.Add(this.txtFlightDetails);
-            
-            // Flight Status Change Section
+            // Flight Status Change Section - Left Bottom
             this.grpFlightStatusChange = new GroupBox();
             this.grpFlightStatusChange.Text = "Flight Status Management";
             this.grpFlightStatusChange.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
-            this.grpFlightStatusChange.Location = new Point(20, 400);
-            this.grpFlightStatusChange.Size = new Size(450, 120);
+            this.grpFlightStatusChange.ForeColor = Color.FromArgb(25, 118, 210);
+            this.grpFlightStatusChange.Location = new Point(20, 340);
+            this.grpFlightStatusChange.Size = new Size(550, 140);
             
             this.lblStatusFlight = new Label();
             this.lblStatusFlight.Text = "Select Flight:";
             this.lblStatusFlight.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
-            this.lblStatusFlight.Location = new Point(15, 30);
+            this.lblStatusFlight.Location = new Point(20, 35);
             this.lblStatusFlight.Size = new Size(80, 20);
             
             this.cmbStatusFlight = new ComboBox();
             this.cmbStatusFlight.DropDownStyle = ComboBoxStyle.DropDownList;
             this.cmbStatusFlight.Font = new Font("Segoe UI", 9F);
-            this.cmbStatusFlight.Location = new Point(100, 28);
-            this.cmbStatusFlight.Size = new Size(180, 23);
+            this.cmbStatusFlight.Location = new Point(110, 32);
+            this.cmbStatusFlight.Size = new Size(200, 25);
             this.cmbStatusFlight.SelectedIndexChanged += new EventHandler(this.cmbStatusFlight_SelectedIndexChanged);
             
             this.lblCurrentStatus = new Label();
             this.lblCurrentStatus.Text = "Current Status:";
             this.lblCurrentStatus.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
-            this.lblCurrentStatus.Location = new Point(15, 60);
+            this.lblCurrentStatus.Location = new Point(20, 70);
             this.lblCurrentStatus.Size = new Size(80, 20);
             
             this.lblCurrentStatusValue = new Label();
             this.lblCurrentStatusValue.Text = "Not Selected";
-            this.lblCurrentStatusValue.Font = new Font("Segoe UI", 9F);
-            this.lblCurrentStatusValue.Location = new Point(100, 60);
-            this.lblCurrentStatusValue.Size = new Size(100, 20);
+            this.lblCurrentStatusValue.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
+            this.lblCurrentStatusValue.Location = new Point(110, 70);
+            this.lblCurrentStatusValue.Size = new Size(120, 20);
             this.lblCurrentStatusValue.ForeColor = Color.FromArgb(244, 67, 54);
             
             this.lblNewStatus = new Label();
             this.lblNewStatus.Text = "New Status:";
             this.lblNewStatus.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
-            this.lblNewStatus.Location = new Point(15, 85);
-            this.lblNewStatus.Size = new Size(70, 20);
+            this.lblNewStatus.Location = new Point(20, 105);
+            this.lblNewStatus.Size = new Size(80, 20);
             
             this.cmbNewStatus = new ComboBox();
             this.cmbNewStatus.DropDownStyle = ComboBoxStyle.DropDownList;
             this.cmbNewStatus.Font = new Font("Segoe UI", 9F);
-            this.cmbNewStatus.Location = new Point(90, 83);
-            this.cmbNewStatus.Size = new Size(120, 23);
+            this.cmbNewStatus.Location = new Point(110, 102);
+            this.cmbNewStatus.Size = new Size(150, 25);
             this.cmbNewStatus.Items.AddRange(new object[] { "Бүртгэж байна", "Онгоцонд сууж байна", "Ниссэн", "Хойшилсон", "Цуцалсан" });
             
             this.btnChangeStatus = new Button();
-            this.btnChangeStatus.Text = "Change Status";
+            this.btnChangeStatus.Text = "Update Status";
             this.btnChangeStatus.BackColor = Color.FromArgb(255, 152, 0);
             this.btnChangeStatus.FlatAppearance.BorderSize = 0;
             this.btnChangeStatus.FlatStyle = FlatStyle.Flat;
             this.btnChangeStatus.ForeColor = Color.White;
             this.btnChangeStatus.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
-            this.btnChangeStatus.Location = new Point(220, 82);
-            this.btnChangeStatus.Size = new Size(120, 25);
+            this.btnChangeStatus.Location = new Point(280, 100);
+            this.btnChangeStatus.Size = new Size(120, 30);
             this.btnChangeStatus.Click += new EventHandler(this.btnChangeStatus_Click);
             
             this.grpFlightStatusChange.Controls.AddRange(new Control[] {
@@ -596,6 +596,26 @@ namespace FlightSystem.CheckinApp
                 this.lblCurrentStatusValue, this.lblNewStatus, this.cmbNewStatus,
                 this.btnChangeStatus
             });
+            
+            // Flight Details - Right Bottom
+            this.grpFlightDetails = new GroupBox();
+            this.grpFlightDetails.Text = "Flight Details";
+            this.grpFlightDetails.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
+            this.grpFlightDetails.ForeColor = Color.FromArgb(25, 118, 210);
+            this.grpFlightDetails.Location = new Point(590, 340);
+            this.grpFlightDetails.Size = new Size(600, 140);
+            
+            this.txtFlightDetails = new TextBox();
+            this.txtFlightDetails.Multiline = true;
+            this.txtFlightDetails.ReadOnly = true;
+            this.txtFlightDetails.ScrollBars = ScrollBars.Vertical;
+            this.txtFlightDetails.Font = new Font("Segoe UI", 9F);
+            this.txtFlightDetails.BackColor = Color.FromArgb(248, 249, 250);
+            this.txtFlightDetails.Location = new Point(20, 30);
+            this.txtFlightDetails.Size = new Size(560, 90);
+            this.txtFlightDetails.BorderStyle = BorderStyle.FixedSingle;
+            
+            this.grpFlightDetails.Controls.Add(this.txtFlightDetails);
 
             this.pnlFlights.Controls.AddRange(new Control[] {
                 this.lstFlights, this.grpFlightActions, this.grpFlightDetails, this.grpFlightStatusChange
@@ -766,13 +786,15 @@ namespace FlightSystem.CheckinApp
             this.grpSeatMap.Text = "Seat Map";
             this.grpSeatMap.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
             this.grpSeatMap.Location = new Point(440, 20);
-            this.grpSeatMap.Size = new Size(600, 400);
+            this.grpSeatMap.Size = new Size(800, 500);
             
             this.pnlSeatMap = new Panel();
             this.pnlSeatMap.Location = new Point(20, 30);
-            this.pnlSeatMap.Size = new Size(560, 300);
+            this.pnlSeatMap.Size = new Size(760, 420);
             this.pnlSeatMap.BackColor = Color.White;
             this.pnlSeatMap.BorderStyle = BorderStyle.FixedSingle;
+            this.pnlSeatMap.AutoScroll = true;
+            this.pnlSeatMap.AutoScrollMinSize = new Size(720, 800);
             
             this.btnLoadSeatMap = new Button();
             this.btnLoadSeatMap.Text = "Load Seat Map";
@@ -780,8 +802,9 @@ namespace FlightSystem.CheckinApp
             this.btnLoadSeatMap.FlatAppearance.BorderSize = 0;
             this.btnLoadSeatMap.FlatStyle = FlatStyle.Flat;
             this.btnLoadSeatMap.ForeColor = Color.White;
-            this.btnLoadSeatMap.Location = new Point(20, 340);
-            this.btnLoadSeatMap.Size = new Size(120, 35);
+            this.btnLoadSeatMap.Location = new Point(20, 460);
+            this.btnLoadSeatMap.Size = new Size(150, 35);
+            this.btnLoadSeatMap.Click += new EventHandler(this.btnLoadSeatMap_Click);
             
             this.grpSeatMap.Controls.AddRange(new Control[] {
                 this.pnlSeatMap, this.btnLoadSeatMap
@@ -792,7 +815,7 @@ namespace FlightSystem.CheckinApp
             this.grpCheckinActions.Text = "Check-in Actions";
             this.grpCheckinActions.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
             this.grpCheckinActions.Location = new Point(20, 390);
-            this.grpCheckinActions.Size = new Size(400, 100);
+            this.grpCheckinActions.Size = new Size(400, 140);
             
             this.btnCheckin = new Button();
             this.btnCheckin.Text = "Check-in Passenger";
@@ -816,8 +839,19 @@ namespace FlightSystem.CheckinApp
             this.btnPrintBoardingPass.Size = new Size(150, 35);
             this.btnPrintBoardingPass.Click += new EventHandler(this.btnPrintBoardingPass_Click);
             
+            this.btnOpenCheckin = new Button();
+            this.btnOpenCheckin.Text = "Open Check-in";
+            this.btnOpenCheckin.BackColor = Color.FromArgb(33, 150, 243);
+            this.btnOpenCheckin.FlatAppearance.BorderSize = 0;
+            this.btnOpenCheckin.FlatStyle = FlatStyle.Flat;
+            this.btnOpenCheckin.ForeColor = Color.White;
+            this.btnOpenCheckin.Font = new Font("Segoe UI", 9F, FontStyle.Bold);
+            this.btnOpenCheckin.Location = new Point(20, 75);
+            this.btnOpenCheckin.Size = new Size(120, 30);
+            this.btnOpenCheckin.Click += new EventHandler(this.btnOpenCheckin_Click);
+            
             this.grpCheckinActions.Controls.AddRange(new Control[] {
-                this.btnCheckin, this.btnPrintBoardingPass
+                this.btnCheckin, this.btnPrintBoardingPass, this.btnOpenCheckin
             });
             
             this.pnlCheckin.Controls.AddRange(new Control[] {
@@ -924,6 +958,152 @@ namespace FlightSystem.CheckinApp
             
             if (!this.tabControl.TabPages.Contains(this.tabBookings))
                 this.tabControl.TabPages.Add(this.tabBookings);
+        }
+
+        private void SetupConcurrentTestTab()
+        {
+            this.tabConcurrentTest.Text = "Concurrent Test";
+            this.tabConcurrentTest.BackColor = Color.FromArgb(255, 248, 240);
+            
+            this.panelConcurrentTest = new Panel();
+            this.panelConcurrentTest.Dock = DockStyle.Fill;
+            this.tabConcurrentTest.Controls.Add(this.panelConcurrentTest);
+            
+            // Title
+            this.lblConcurrentTestTitle = new Label();
+            this.lblConcurrentTestTitle.Text = "Concurrent Seat Assignment Test";
+            this.lblConcurrentTestTitle.Font = new Font("Segoe UI", 16F, FontStyle.Bold);
+            this.lblConcurrentTestTitle.ForeColor = Color.FromArgb(51, 51, 51);
+            this.lblConcurrentTestTitle.Location = new Point(20, 20);
+            this.lblConcurrentTestTitle.Size = new Size(400, 30);
+            
+            // Flight Selection
+            var lblTestFlight = new Label();
+            lblTestFlight.Text = "Select Flight:";
+            lblTestFlight.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
+            lblTestFlight.Location = new Point(20, 70);
+            lblTestFlight.Size = new Size(100, 25);
+            
+            this.cmbTestFlight = new ComboBox();
+            this.cmbTestFlight.DropDownStyle = ComboBoxStyle.DropDownList;
+            this.cmbTestFlight.Location = new Point(130, 68);
+            this.cmbTestFlight.Size = new Size(300, 25);
+            this.cmbTestFlight.Font = new Font("Segoe UI", 10F);
+            this.cmbTestFlight.SelectedIndexChanged += new EventHandler(this.cmbTestFlight_SelectedIndexChanged);
+            
+            // Seat Number
+            var lblTestSeat = new Label();
+            lblTestSeat.Text = "Seat Number:";
+            lblTestSeat.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
+            lblTestSeat.Location = new Point(20, 110);
+            lblTestSeat.Size = new Size(100, 25);
+            
+            this.txtTestSeatNumber = new TextBox();
+            this.txtTestSeatNumber.Location = new Point(130, 108);
+            this.txtTestSeatNumber.Size = new Size(100, 25);
+            this.txtTestSeatNumber.Font = new Font("Segoe UI", 10F);
+            this.txtTestSeatNumber.PlaceholderText = "e.g., 12A";
+            
+            // Passenger 1
+            var lblTestPassenger1 = new Label();
+            lblTestPassenger1.Text = "Passenger 1 Passport:";
+            lblTestPassenger1.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
+            lblTestPassenger1.Location = new Point(20, 150);
+            lblTestPassenger1.Size = new Size(150, 25);
+            
+            this.txtTestPassenger1 = new TextBox();
+            this.txtTestPassenger1.Location = new Point(180, 148);
+            this.txtTestPassenger1.Size = new Size(150, 25);
+            this.txtTestPassenger1.Font = new Font("Segoe UI", 10F);
+            this.txtTestPassenger1.PlaceholderText = "e.g., MP12345678";
+            
+            // Passenger 2
+            var lblTestPassenger2 = new Label();
+            lblTestPassenger2.Text = "Passenger 2 Passport:";
+            lblTestPassenger2.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
+            lblTestPassenger2.Location = new Point(20, 190);
+            lblTestPassenger2.Size = new Size(150, 25);
+            
+            this.txtTestPassenger2 = new TextBox();
+            this.txtTestPassenger2.Location = new Point(180, 188);
+            this.txtTestPassenger2.Size = new Size(150, 25);
+            this.txtTestPassenger2.Font = new Font("Segoe UI", 10F);
+            this.txtTestPassenger2.PlaceholderText = "e.g., MP87654321";
+            
+            // Refresh Flights Button
+            var btnRefreshFlights = new Button();
+            btnRefreshFlights.Text = "🔄 Refresh Flights";
+            btnRefreshFlights.Font = new Font("Segoe UI", 10F);
+            btnRefreshFlights.BackColor = Color.FromArgb(33, 150, 243);
+            btnRefreshFlights.ForeColor = Color.White;
+            btnRefreshFlights.FlatStyle = FlatStyle.Flat;
+            btnRefreshFlights.FlatAppearance.BorderSize = 0;
+            btnRefreshFlights.Location = new Point(450, 68);
+            btnRefreshFlights.Size = new Size(120, 25);
+            btnRefreshFlights.Click += new EventHandler(this.btnRefreshTestFlights_Click);
+
+            // Instructions Panel
+            var instructionsPanel = new Panel();
+            instructionsPanel.Size = new Size(830, 80);
+            instructionsPanel.Location = new Point(10, 240);
+            instructionsPanel.BackColor = Color.FromArgb(255, 248, 220);
+            instructionsPanel.BorderStyle = BorderStyle.FixedSingle;
+
+            var lblInstructions = new Label();
+            lblInstructions.Text = "📋 Зааварчилгаа:\n" +
+                                  "1. Эхлээд 'Bookings' таб ашиглан хоёр зорчигчийн бүртгэл үүсгэх\n" +
+                                  "2. Нислэг сонгоод суудлын дугаар оруулах (жишээ: 12A)\n" +
+                                  "3. Хоёр зорчигчийн пасспортын дугаар оруулах\n" +
+                                  "4. 'Run Concurrent Test' дарж нэгэн зэрэг суудал хуваарилахыг турших";
+            lblInstructions.Font = new Font("Segoe UI", 9F);
+            lblInstructions.Location = new Point(10, 10);
+            lblInstructions.Size = new Size(810, 60);
+            lblInstructions.ForeColor = Color.FromArgb(51, 51, 51);
+
+            instructionsPanel.Controls.Add(lblInstructions);
+
+            // Test Button
+            this.btnRunConcurrentTest = new Button();
+            this.btnRunConcurrentTest.Text = "🚀 Run Concurrent Test";
+            this.btnRunConcurrentTest.Font = new Font("Segoe UI", 12F, FontStyle.Bold);
+            this.btnRunConcurrentTest.BackColor = Color.FromArgb(76, 175, 80);
+            this.btnRunConcurrentTest.ForeColor = Color.White;
+            this.btnRunConcurrentTest.FlatStyle = FlatStyle.Flat;
+            this.btnRunConcurrentTest.FlatAppearance.BorderSize = 0;
+            this.btnRunConcurrentTest.Location = new Point(20, 330);
+            this.btnRunConcurrentTest.Size = new Size(200, 40);
+            this.btnRunConcurrentTest.Click += new EventHandler(this.btnRunConcurrentTest_Click);
+            
+            // Results
+            var lblTestResults = new Label();
+            lblTestResults.Text = "Test Results:";
+            lblTestResults.Font = new Font("Segoe UI", 10F, FontStyle.Bold);
+            lblTestResults.Location = new Point(20, 380);
+            lblTestResults.Size = new Size(100, 25);
+            
+            this.txtTestResults = new TextBox();
+            this.txtTestResults.Multiline = true;
+            this.txtTestResults.ScrollBars = ScrollBars.Vertical;
+            this.txtTestResults.ReadOnly = true;
+            this.txtTestResults.Location = new Point(20, 410);
+            this.txtTestResults.Size = new Size(900, 250);
+            this.txtTestResults.Font = new Font("Consolas", 9F);
+            this.txtTestResults.BackColor = Color.FromArgb(248, 248, 248);
+            
+            // Add controls to panel
+            this.panelConcurrentTest.Controls.AddRange(new Control[] {
+                this.lblConcurrentTestTitle,
+                lblTestFlight, this.cmbTestFlight, btnRefreshFlights,
+                lblTestSeat, this.txtTestSeatNumber,
+                lblTestPassenger1, this.txtTestPassenger1,
+                lblTestPassenger2, this.txtTestPassenger2,
+                instructionsPanel,
+                this.btnRunConcurrentTest,
+                lblTestResults, this.txtTestResults
+            });
+            
+            if (!this.tabControl.TabPages.Contains(this.tabConcurrentTest))
+                this.tabControl.TabPages.Add(this.tabConcurrentTest);
         }
     }
 }
