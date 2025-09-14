@@ -43,6 +43,13 @@ namespace FlightSystem.CheckinApp
             SetupMenuStrip();
             SetupStatusBar();
             
+            // Setup all tab pages with their content
+            SetupDashboardTab();
+            SetupFlightsTab();
+            SetupPassengersTab();
+            SetupCheckinTab();
+            SetupBookingsTab();
+            
             // Load initial data
             await LoadInitialData();
             
@@ -146,7 +153,8 @@ namespace FlightSystem.CheckinApp
                     LoadFlights(),
                     LoadPassengers(),
                     LoadFlightPassengers(),
-                    LoadCheckinFlights()
+                    LoadCheckinFlights(),
+                    LoadStatusChangeFlights()
                 );
             }
             catch (Exception ex)
@@ -302,7 +310,7 @@ namespace FlightSystem.CheckinApp
             }
         }
 
-        private async void OnFlightUpdated(FlightInfoDto flight)
+        private void OnFlightUpdated(FlightInfoDto flight)
         {
             if (InvokeRequired)
             {
@@ -418,12 +426,14 @@ namespace FlightSystem.CheckinApp
                 UpdateFlightDetails();
                 if (btnManageFlight != null) btnManageFlight.Enabled = true;
                 if (btnSelectFlight != null) btnSelectFlight.Enabled = true;
+                if (btnChangeFlightStatus != null) btnChangeFlightStatus.Enabled = true;
             }
             else
             {
                 _selectedFlight = null;
                 if (btnManageFlight != null) btnManageFlight.Enabled = false;
                 if (btnSelectFlight != null) btnSelectFlight.Enabled = false;
+                if (btnChangeFlightStatus != null) btnChangeFlightStatus.Enabled = false;
             }
         }
 
@@ -496,6 +506,14 @@ namespace FlightSystem.CheckinApp
             }
         }
 
+        private async void btnChangeFlightStatus_Click(object sender, EventArgs e)
+        {
+            if (_selectedFlight != null)
+            {
+                await ShowChangeStatusDialog(_selectedFlight);
+            }
+        }
+
         private void btnManagePassenger_Click(object sender, EventArgs e)
         {
             ManagePassenger();
@@ -509,6 +527,163 @@ namespace FlightSystem.CheckinApp
         private void btnCancelBooking_Click(object sender, EventArgs e)
         {
             CancelBooking();
+        }
+
+        // Check-in Event Handlers
+        private async void btnSearchPassenger_Click(object sender, EventArgs e)
+        {
+            await SearchPassenger();
+        }
+
+        private async void btnCheckin_Click(object sender, EventArgs e)
+        {
+            await PerformCheckin();
+        }
+
+        private async void btnPrintBoardingPass_Click(object sender, EventArgs e)
+        {
+            await PrintBoardingPass();
+        }
+
+        // Flight Status Change Event Handlers
+        private void cmbStatusFlight_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            if (cmbStatusFlight?.SelectedItem is FlightComboBoxItem selectedItem)
+            {
+                if (lblCurrentStatusValue != null)
+                {
+                    lblCurrentStatusValue.Text = selectedItem.Flight.Status;
+                    lblCurrentStatusValue.ForeColor = GetStatusColor(selectedItem.Flight.Status);
+                }
+            }
+        }
+
+        private async void btnChangeStatus_Click(object sender, EventArgs e)
+        {
+            await ChangeFlightStatus();
+        }
+
+        private async Task ShowChangeStatusDialog(FlightInfoDto flight)
+        {
+            // Create a simple dialog for status change
+            var statusDialog = new Form
+            {
+                Text = $"Change Status - {flight.FlightNumber}",
+                Size = new Size(400, 200),
+                StartPosition = FormStartPosition.CenterParent,
+                FormBorderStyle = FormBorderStyle.FixedDialog,
+                MaximizeBox = false,
+                MinimizeBox = false
+            };
+
+            var lblCurrentStatus = new Label
+            {
+                Text = $"Current Status: {flight.Status}",
+                Location = new Point(20, 20),
+                Size = new Size(350, 25),
+                Font = new Font("Segoe UI", 10F, FontStyle.Bold)
+            };
+
+            var lblNewStatus = new Label
+            {
+                Text = "New Status:",
+                Location = new Point(20, 60),
+                Size = new Size(80, 25),
+                Font = new Font("Segoe UI", 9F, FontStyle.Bold)
+            };
+
+            var cmbNewStatus = new ComboBox
+            {
+                DropDownStyle = ComboBoxStyle.DropDownList,
+                Location = new Point(110, 58),
+                Size = new Size(150, 25),
+                Font = new Font("Segoe UI", 9F)
+            };
+            cmbNewStatus.Items.AddRange(new object[] { "Бүртгэж байна", "Онгоцонд сууж байна", "Ниссэн", "Хойшилсон", "Цуцалсан" });
+
+            var btnOK = new Button
+            {
+                Text = "Change Status",
+                Location = new Point(200, 100),
+                Size = new Size(100, 30),
+                BackColor = Color.FromArgb(255, 152, 0),
+                FlatStyle = FlatStyle.Flat,
+                ForeColor = Color.White,
+                Font = new Font("Segoe UI", 9F, FontStyle.Bold)
+            };
+
+            var btnCancel = new Button
+            {
+                Text = "Cancel",
+                Location = new Point(310, 100),
+                Size = new Size(80, 30),
+                BackColor = Color.FromArgb(108, 117, 125),
+                FlatStyle = FlatStyle.Flat,
+                ForeColor = Color.White,
+                Font = new Font("Segoe UI", 9F, FontStyle.Bold)
+            };
+
+            btnOK.Click += async (s, e) =>
+            {
+                if (cmbNewStatus.SelectedItem != null)
+                {
+                    var newStatus = cmbNewStatus.SelectedItem.ToString();
+                    var result = MessageBox.Show($"Are you sure you want to change flight {flight.FlightNumber} status from '{flight.Status}' to '{newStatus}'?",
+                        "Confirm Status Change", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+
+                    if (result == DialogResult.Yes)
+                    {
+                        await ChangeFlightStatusDirectly(flight.Id, newStatus);
+                        statusDialog.Close();
+                    }
+                }
+                else
+                {
+                    MessageBox.Show("Please select a new status.", "Selection Required", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                }
+            };
+
+            btnCancel.Click += (s, e) => statusDialog.Close();
+
+            statusDialog.Controls.AddRange(new Control[] { lblCurrentStatus, lblNewStatus, cmbNewStatus, btnOK, btnCancel });
+            statusDialog.ShowDialog(this);
+        }
+
+        private async Task ChangeFlightStatusDirectly(int flightId, string newStatus)
+        {
+            try
+            {
+                var request = new { Status = newStatus };
+                var json = JsonSerializer.Serialize(request);
+                var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+                var response = await _httpClient.PutAsync($"/api/flight/{flightId}/status", content);
+                var responseContent = await response.Content.ReadAsStringAsync();
+                
+                var result = JsonSerializer.Deserialize<ApiResponseDto<bool>>(
+                    responseContent, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+                if (result?.Success == true)
+                {
+                    MessageBox.Show($"Flight status changed successfully to '{newStatus}'!", "Success", 
+                        MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    
+                    // Refresh flights data
+                    await LoadFlights();
+                    await LoadCheckinFlights();
+                    await LoadStatusChangeFlights();
+                }
+                else
+                {
+                    MessageBox.Show($"Failed to change flight status: {result?.Message ?? "Unknown error"}", "Error", 
+                        MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error changing flight status: {ex.Message}", "Error", 
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
         }
 
         private async Task ShowAddFlightDialog()
@@ -656,11 +831,298 @@ namespace FlightSystem.CheckinApp
             }
         }
 
+        private async Task LoadStatusChangeFlights()
+        {
+            if (cmbStatusFlight == null) return;
+
+            try
+            {
+                var response = await _httpClient.GetAsync("/api/flight/active");
+                var responseContent = await response.Content.ReadAsStringAsync();
+                
+                var result = JsonSerializer.Deserialize<ApiResponseDto<FlightInfoDto[]>>(
+                    responseContent, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+                if (result?.Success == true && result.Data != null)
+                {
+                    cmbStatusFlight.Items.Clear();
+                    foreach (var flight in result.Data.OrderBy(f => f.ScheduledDeparture))
+                    {
+                        cmbStatusFlight.Items.Add(new FlightComboBoxItem
+                        {
+                            Flight = flight,
+                            DisplayText = $"{flight.FlightNumber} - {flight.DepartureAirport} → {flight.ArrivalAirport}"
+                        });
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error loading flights for status change: {ex.Message}", "Error", 
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
         private class FlightComboBoxItem
         {
             public FlightInfoDto Flight { get; set; } = new();
             public string DisplayText { get; set; } = string.Empty;
             public override string ToString() => DisplayText;
+        }
+
+        // Check-in Methods
+        private async Task SearchPassenger()
+        {
+            if (string.IsNullOrWhiteSpace(txtPassportSearch?.Text))
+            {
+                MessageBox.Show("Please enter a passport number.", "Input Required", 
+                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            if (cmbCheckinFlight?.SelectedItem is not FlightComboBoxItem selectedFlight)
+            {
+                MessageBox.Show("Please select a flight first.", "Flight Required", 
+                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            try
+            {
+                var response = await _httpClient.GetAsync($"/api/flightpassenger/passenger-by-passport/{txtPassportSearch.Text}");
+                var responseContent = await response.Content.ReadAsStringAsync();
+                
+                if (string.IsNullOrWhiteSpace(responseContent))
+                {
+                    MessageBox.Show("No response from server. Please check if the server is running.", "Server Error", 
+                        MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    return;
+                }
+                
+                var result = JsonSerializer.Deserialize<ApiResponseDto<IEnumerable<FlightPassengerDto>>>(
+                    responseContent, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+                if (result?.Success == true && result.Data != null)
+                {
+                    // Find the passenger for the selected flight
+                    var flightPassenger = result.Data.FirstOrDefault(fp => fp.Flight.Id == selectedFlight.Flight.Id);
+                    
+                    if (flightPassenger != null)
+                    {
+                        if (txtPassengerInfo != null)
+                        {
+                            txtPassengerInfo.Text = $"Name: {flightPassenger.Passenger.FirstName} {flightPassenger.Passenger.LastName}\n" +
+                                                  $"Passport: {flightPassenger.Passenger.PassportNumber}\n" +
+                                                  $"Nationality: {flightPassenger.Passenger.Nationality}\n" +
+                                                  $"Booking Ref: {flightPassenger.BookingReference}\n" +
+                                                  $"Checked In: {(flightPassenger.IsCheckedIn ? "Yes" : "No")}";
+                        }
+                    }
+                    else
+                    {
+                        MessageBox.Show($"Passenger with passport {txtPassportSearch.Text} is not booked for flight {selectedFlight.Flight.FlightNumber}.", "Not Found", 
+                            MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        if (txtPassengerInfo != null)
+                            txtPassengerInfo.Clear();
+                    }
+                }
+                else
+                {
+                    MessageBox.Show("Passenger not found.", "Not Found", 
+                        MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    if (txtPassengerInfo != null)
+                        txtPassengerInfo.Clear();
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error searching passenger: {ex.Message}", "Error", 
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private async Task PerformCheckin()
+        {
+            if (string.IsNullOrWhiteSpace(txtPassportSearch?.Text))
+            {
+                MessageBox.Show("Please search for a passenger first.", "Passenger Required", 
+                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            if (cmbCheckinFlight?.SelectedItem is not FlightComboBoxItem selectedFlight)
+            {
+                MessageBox.Show("Please select a flight first.", "Flight Required", 
+                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            try
+            {
+                var request = new CheckinRequestDto
+                {
+                    FlightNumber = selectedFlight.Flight.FlightNumber,
+                    PassportNumber = txtPassportSearch.Text,
+                    EmployeeId = _currentEmployee.Id
+                };
+                
+                var json = JsonSerializer.Serialize(request);
+                var content = new StringContent(json, Encoding.UTF8, "application/json");
+                
+                var response = await _httpClient.PostAsync("/api/checkin/passenger", content);
+                var responseContent = await response.Content.ReadAsStringAsync();
+                
+                var result = JsonSerializer.Deserialize<ApiResponseDto<CheckinResultDto>>(
+                    responseContent, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+                if (result?.Success == true)
+                {
+                    MessageBox.Show("Passenger checked in successfully!", "Success", 
+                        MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    
+                    // Refresh passenger info
+                    await SearchPassenger();
+                }
+                else
+                {
+                    MessageBox.Show($"Failed to check in passenger: {result?.Message ?? "Unknown error"}", "Error", 
+                        MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error checking in passenger: {ex.Message}", "Error", 
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private async Task PrintBoardingPass()
+        {
+            if (string.IsNullOrWhiteSpace(txtPassportSearch?.Text))
+            {
+                MessageBox.Show("Please search for a passenger first.", "Passenger Required", 
+                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            if (cmbCheckinFlight?.SelectedItem is not FlightComboBoxItem selectedFlight)
+            {
+                MessageBox.Show("Please select a flight first.", "Flight Required", 
+                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            try
+            {
+                var response = await _httpClient.GetAsync($"/api/checkin/boarding-pass/{selectedFlight.Flight.Id}/{txtPassportSearch.Text}");
+                var responseContent = await response.Content.ReadAsStringAsync();
+                
+                if (string.IsNullOrWhiteSpace(responseContent))
+                {
+                    MessageBox.Show("No response from server. Please check if the server is running.", "Server Error", 
+                        MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    return;
+                }
+                
+                var result = JsonSerializer.Deserialize<ApiResponseDto<BoardingPassDto>>(
+                    responseContent, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+                if (result?.Success == true && result.Data != null)
+                {
+                    // For now, show the boarding pass in a message box
+                    // In a real application, you would send this to a printer
+                    MessageBox.Show($"BOARDING PASS\n\n" +
+                                  $"Flight: {result.Data.Flight.FlightNumber}\n" +
+                                  $"Passenger: {result.Data.Passenger.FirstName} {result.Data.Passenger.LastName}\n" +
+                                  $"Seat: {result.Data.Seat.SeatNumber}\n" +
+                                  $"Gate: {result.Data.Gate}\n" +
+                                  $"Boarding: {result.Data.BoardingTime:HH:mm}\n" +
+                                  $"Reference: {result.Data.BoardingPassCode}", 
+                        "Boarding Pass", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
+                else
+                {
+                    MessageBox.Show("Failed to generate boarding pass.", "Error", 
+                        MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error printing boarding pass: {ex.Message}", "Error", 
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        // Flight Status Change Methods
+        private async Task ChangeFlightStatus()
+        {
+            if (cmbStatusFlight?.SelectedItem is not FlightComboBoxItem selectedFlight)
+            {
+                MessageBox.Show("Please select a flight first.", "Flight Required", 
+                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            if (cmbNewStatus?.SelectedItem == null)
+            {
+                MessageBox.Show("Please select a new status.", "Status Required", 
+                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            var newStatus = cmbNewStatus.SelectedItem.ToString();
+            var result = MessageBox.Show($"Are you sure you want to change flight {selectedFlight.Flight.FlightNumber} status from '{selectedFlight.Flight.Status}' to '{newStatus}'?", 
+                "Confirm Status Change", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+
+            if (result == DialogResult.Yes)
+            {
+                try
+                {
+                    var request = new { Status = newStatus };
+                    var json = JsonSerializer.Serialize(request);
+                    var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+                    var response = await _httpClient.PutAsync($"/api/flight/{selectedFlight.Flight.Id}/status", content);
+                    var responseContent = await response.Content.ReadAsStringAsync();
+                    
+                    var apiResult = JsonSerializer.Deserialize<ApiResponseDto<bool>>(
+                        responseContent, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+                    if (apiResult?.Success == true)
+                    {
+                        MessageBox.Show($"Flight status changed successfully to '{newStatus}'!", "Success", 
+                            MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        
+                        // Refresh flights data
+                        await LoadFlights();
+                        await LoadCheckinFlights();
+                        await LoadStatusChangeFlights();
+                    }
+                    else
+                    {
+                        MessageBox.Show($"Failed to change flight status: {apiResult?.Message ?? "Unknown error"}", "Error", 
+                            MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"Error changing flight status: {ex.Message}", "Error", 
+                        MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+            }
+        }
+
+        private Color GetStatusColor(string status)
+        {
+            return status switch
+            {
+                "Бүртгэж байна" => Color.Blue,
+                "Онгоцонд сууж байна" => Color.Orange,
+                "Ниссэн" => Color.Green,
+                "Хойшилсон" => Color.Red,
+                "Цуцалсан" => Color.DarkRed,
+                _ => Color.Black
+            };
         }
 
         private Image CreateProfileImage(char initial)
